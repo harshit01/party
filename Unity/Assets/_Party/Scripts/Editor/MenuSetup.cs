@@ -1,4 +1,5 @@
 using Party.Character;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -43,6 +44,8 @@ namespace Party.EditorTools
             key.transform.rotation = Quaternion.Euler(28f, 150f, 0f);
             PresentationSetup.GlobalVolume();
 
+            BuildStage();
+
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = "Floor";
             floor.transform.localScale = Vector3.one * 5f;
@@ -57,6 +60,16 @@ namespace Party.EditorTools
             podium.GetComponent<Renderer>().sharedMaterial =
                 PresentationSetup.Lit("Podium", Play, 0.5f, 0f, new Color(0.32f, 0.05f, 0.14f));
 
+            // Glowing ring around the podium.
+            GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ring.name = "PodiumRing";
+            Object.DestroyImmediate(ring.GetComponent<Collider>());
+            ring.transform.position = new Vector3(0f, -1.60f, 0f);
+            ring.transform.localScale = new Vector3(1.78f, 0.015f, 1.78f);
+            ring.GetComponent<Renderer>().sharedMaterial =
+                PresentationSetup.Lit("PodiumRing", new Color(1f, 0.85f, 0.35f), 0.8f, 0f,
+                                      new Color(0.95f, 0.70f, 0.20f));
+
             GameObject charGo = new GameObject("Character");
             charGo.transform.position = new Vector3(0f, -0.5f, 0f);
             charGo.transform.localScale = Vector3.one * 1.5f;
@@ -66,9 +79,11 @@ namespace Party.EditorTools
             camGo.tag = "MainCamera";
             Camera cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.Skybox;
-            cam.fieldOfView = 32f;
-            camGo.transform.position = new Vector3(0.55f, 0.15f, -5.4f);
-            camGo.transform.rotation = Quaternion.Euler(2.5f, -6f, 0f);
+            cam.fieldOfView = 30f;
+            // Pulled back and offset so the whole Filament reads, sitting left of the
+            // button column rather than being cropped by it.
+            camGo.transform.position = new Vector3(-1.65f, 0.55f, -9.2f);
+            camGo.transform.rotation = Quaternion.Euler(3.5f, 9.5f, 0f);
             camGo.AddComponent<AudioListener>();
             var cd = camGo.GetComponent<UniversalAdditionalCameraData>();
             if (cd == null) cd = camGo.AddComponent<UniversalAdditionalCameraData>();
@@ -76,7 +91,17 @@ namespace Party.EditorTools
             cd.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
 
             GameObject sys = new GameObject("Systems");
-            sys.AddComponent<SteamBoot>();   // so the menu can report Steam's real state
+            sys.AddComponent<SteamBoot>();
+            sys.AddComponent<MenuAudio>();
+
+            // Rim light from behind so the glass dome separates from the sunburst - a
+            // transparent head against a bright backdrop otherwise disappears into it.
+            GameObject rim = new GameObject("Rim Light");
+            rim.transform.position = new Vector3(-2.6f, 2.2f, 3.4f);
+            rim.transform.LookAt(new Vector3(0f, -0.2f, 0f));
+            Light rl = rim.AddComponent<Light>();
+            rl.type = LightType.Spot; rl.range = 18f; rl.spotAngle = 55f;
+            rl.intensity = 9f; rl.color = new Color(0.75f, 0.85f, 1f); rl.shadows = LightShadows.None;   // so the menu can report Steam's real state
 
             // ---------- canvas ----------
             GameObject canvasGo = new GameObject("Canvas", typeof(RectTransform));
@@ -88,15 +113,39 @@ namespace Party.EditorTools
             cs.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
+            // StandaloneInputModule reads UnityEngine.Input, which THROWS when the project
+            // is set to the Input System package - the EventSystem dies and not one button
+            // responds. InputSystemUIInputModule is the Input System equivalent.
             GameObject es = new GameObject("EventSystem");
             es.AddComponent<EventSystem>();
-            es.AddComponent<StandaloneInputModule>();
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
 
             _menu = canvasGo.AddComponent<MainMenu>();
             _menu.display = display;
 
-            Label(canvasGo.transform, "Title", "PARTY GAME", 88, TL, new Vector2(64f, -52f),
-                  new Vector2(900f, 110f), TextAnchor.UpperLeft, Accent);
+            // A dark scrim behind the UI column. Without it, white text sits on top of
+            // drifting confetti and a rotating sunburst and becomes unreadable - the
+            // background being lively is exactly why the foreground needs a backing.
+            GameObject scrim = UI("Scrim", canvasGo.transform);
+            Place(scrim, TR, new Vector2(0f, 0f), new Vector2(640f, 1080f));
+            RectTransform srt = scrim.GetComponent<RectTransform>();
+            srt.anchorMin = new Vector2(1f, 0f); srt.anchorMax = new Vector2(1f, 1f);
+            srt.pivot = new Vector2(1f, 0.5f);
+            srt.anchoredPosition = Vector2.zero;
+            srt.sizeDelta = new Vector2(640f, 0f);
+            Image si = scrim.AddComponent<Image>();
+            si.color = new Color(0.06f, 0.05f, 0.12f, 0.72f);
+            si.raycastTarget = false;
+
+            Text title = Label(canvasGo.transform, "Title", "PARTY GAME", 92, TL, new Vector2(64f, -52f),
+                               new Vector2(900f, 120f), TextAnchor.UpperLeft, Accent);
+            title.fontStyle = FontStyle.Bold;
+            var tOut = title.gameObject.AddComponent<Outline>();
+            tOut.effectColor = new Color(0.25f, 0.05f, 0.15f, 1f);
+            tOut.effectDistance = new Vector2(3f, -3f);
+            var tSh = title.gameObject.AddComponent<Shadow>();
+            tSh.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            tSh.effectDistance = new Vector2(6f, -7f);
             Label(canvasGo.transform, "Sub", "working title", 24, TL, new Vector2(70f, -150f),
                   new Vector2(700f, 36f), TextAnchor.UpperLeft, Dim);
 
@@ -115,6 +164,63 @@ namespace Party.EditorTools
                 new EditorBuildSettingsScene("Assets/_Party/Scenes/NetTest.unity", true),
             };
             Debug.Log("[Party] menu scene built.");
+        }
+
+        /// <summary>
+        /// Studio set: a radial sunburst backdrop, a curved wall, spotlights and confetti.
+        /// The game is a televised show, so the menu should look like a stage with the
+        /// lights on rather than an empty skybox.
+        /// </summary>
+        static void BuildStage()
+        {
+            GameObject stage = new GameObject("Stage");
+            MenuStage ms = stage.AddComponent<MenuStage>();
+
+            // Sunburst - alternating wedges radiating behind the contestant.
+            GameObject burst = new GameObject("Sunburst");
+            burst.transform.SetParent(stage.transform, false);
+            burst.transform.position = new Vector3(0f, 0.4f, 7.5f);
+            Material warm = MenuStage.Unlit(new Color(0.99f, 0.55f, 0.22f));
+            Material deep = MenuStage.Unlit(new Color(0.92f, 0.33f, 0.30f));
+            for (int i = 0; i < 18; i++)
+            {
+                GameObject wedge = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                Object.DestroyImmediate(wedge.GetComponent<Collider>());
+                wedge.transform.SetParent(burst.transform, false);
+                wedge.transform.localRotation = Quaternion.Euler(0f, 0f, i * (360f / 18f));
+                wedge.transform.localScale = new Vector3(1.5f, 26f, 1f);
+                wedge.transform.localPosition = Vector3.zero;
+                wedge.GetComponent<Renderer>().sharedMaterial = (i % 2 == 0) ? warm : deep;
+            }
+            ms.sunburst = burst.transform;
+
+            // A big flat disc behind the sunburst so gaps do not show sky.
+            GameObject back = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Object.DestroyImmediate(back.GetComponent<Collider>());
+            back.name = "Backdrop";
+            back.transform.SetParent(stage.transform, false);
+            back.transform.position = new Vector3(0f, 0.4f, 8.4f);
+            back.transform.localScale = new Vector3(46f, 30f, 1f);
+            back.GetComponent<Renderer>().sharedMaterial = MenuStage.Unlit(new Color(0.30f, 0.10f, 0.26f));
+
+            // Spotlights on the podium.
+            var lights = new System.Collections.Generic.List<Light>();
+            Color[] spotCols = { new Color(1f,0.55f,0.75f), new Color(0.55f,0.75f,1f), new Color(1f,0.9f,0.6f) };
+            for (int i = 0; i < 3; i++)
+            {
+                GameObject lg = new GameObject("Spot" + i);
+                lg.transform.SetParent(stage.transform, false);
+                float a = -50f + i * 50f;
+                lg.transform.position = Quaternion.Euler(0f, a, 0f) * new Vector3(0f, 4.2f, -4.6f);
+                lg.transform.LookAt(new Vector3(0f, -0.3f, 0f));
+                Light L = lg.AddComponent<Light>();
+                L.type = LightType.Spot; L.range = 22f; L.spotAngle = 46f;
+                L.intensity = 14f; L.color = spotCols[i];
+                L.shadows = LightShadows.None;
+                lights.Add(L);
+            }
+            ms.pulseLights = lights.ToArray();
+            ms.area = new Vector3(18f, 11f, 5f);
         }
 
         // ---------- panels ----------
@@ -289,6 +395,7 @@ namespace Party.EditorTools
             Text t = Label(go.transform, "Text", text, fontSize, new Vector2(0.5f, 0.5f),
                            Vector2.zero, size, TextAnchor.MiddleCenter, Color.white);
             Place(t.gameObject, new Vector2(0.5f, 0.5f), Vector2.zero, size);
+            go.AddComponent<ButtonFeel>();
             return b;
         }
 
