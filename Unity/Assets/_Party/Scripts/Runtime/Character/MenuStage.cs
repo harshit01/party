@@ -11,14 +11,16 @@ namespace Party.Character
     /// </summary>
     public class MenuStage : MonoBehaviour
     {
-        [Header("Sunburst")]
-        public Transform sunburst;
+        [Header("Backdrop")]
+        public Transform sunburst;          // optional, unused by the soft stage
         public float sunburstSpeed = 3.5f;
 
-        [Header("Confetti")]
-        public int confettiCount = 90;
+        [Header("Bokeh")]
+        [Tooltip("Soft out-of-focus dots. Assigned by MenuSetup.")]
+        public Material[] bokehMaterials;
+        public int confettiCount = 34;
         public Vector3 area = new Vector3(16f, 10f, 6f);
-        public float fallSpeed = 0.9f;
+        public float fallSpeed = 0.55f;
 
         [Header("Lights")]
         public Light[] pulseLights;
@@ -42,15 +44,13 @@ namespace Party.Character
 
         void SpawnConfetti()
         {
-            Color[] cols =
-            {
-                new Color(0.98f,0.30f,0.45f), new Color(0.35f,0.70f,1f), new Color(0.35f,0.90f,0.55f),
-                new Color(1f,0.82f,0.25f), new Color(0.72f,0.45f,1f), new Color(1f,0.60f,0.25f),
-            };
-            Material[] mats = new Material[cols.Length];
-            for (int i = 0; i < cols.Length; i++) mats[i] = Unlit(cols[i]);
+            // Few, large, soft and slow. Ninety hard chips read as debris; a few dozen
+            // out-of-focus lights read as atmosphere.
+            Material[] mats = (bokehMaterials != null && bokehMaterials.Length > 0)
+                ? bokehMaterials
+                : new[] { Unlit(new Color(1f, 0.8f, 0.6f, 0.25f)) };
 
-            GameObject root = new GameObject("Confetti");
+            GameObject root = new GameObject("Bokeh");
             root.transform.SetParent(transform, false);
             _confetti = new Transform[confettiCount];
             _spin = new Vector3[confettiCount];
@@ -61,8 +61,9 @@ namespace Party.Character
                 Destroy(c.GetComponent<Collider>());
                 c.transform.SetParent(root.transform, false);
                 c.transform.localPosition = RandomPos(true);
-                c.transform.localScale = new Vector3(Random.Range(0.09f, 0.20f), Random.Range(0.12f, 0.26f), 1f);
-                c.transform.localRotation = Random.rotation;
+                float sz = Random.Range(0.35f, 1.5f);
+                c.transform.localScale = new Vector3(sz, sz, 1f);
+                c.transform.localRotation = Quaternion.identity;   // billboards face camera
                 c.GetComponent<Renderer>().sharedMaterial = mats[Random.Range(0, mats.Length)];
                 _confetti[i] = c.transform;
                 _spin[i] = new Vector3(Random.Range(-90f, 90f), Random.Range(-90f, 90f), Random.Range(-90f, 90f));
@@ -85,11 +86,11 @@ namespace Party.Character
                     Transform t = _confetti[i];
                     if (t == null) continue;
                     Vector3 p = t.localPosition;
-                    p.y -= fallSpeed * Time.deltaTime * (0.6f + (i % 5) * 0.16f);
-                    p.x += Mathf.Sin(Time.time * 0.7f + i) * 0.10f * Time.deltaTime;
+                    p.y -= fallSpeed * Time.deltaTime * (0.18f + (i % 5) * 0.06f);   // drift, not fall
+                    p.x += Mathf.Sin(Time.time * 0.35f + i) * 0.18f * Time.deltaTime;
                     if (p.y < -area.y * 0.5f) p = RandomPos(false);
                     t.localPosition = p;
-                    t.Rotate(_spin[i] * Time.deltaTime, Space.Self);
+                    if (Camera.main != null) t.forward = Camera.main.transform.forward;
                 }
 
             if (pulseLights != null && _baseIntensity != null)

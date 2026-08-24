@@ -22,6 +22,19 @@ namespace Party.EditorTools
         const string ScenePath = "Assets/_Party/Scenes/Menu.unity";
         static Font _font;
         static MainMenu _menu;
+        static Sprite _bubble;
+
+        /// <summary>Nav buttons cycle these so the column reads as colourful bubbles
+        /// rather than a stack of grey boxes.</summary>
+        static readonly Color[] BubbleCols =
+        {
+            new Color(0.30f, 0.72f, 0.95f),   // sky
+            new Color(0.55f, 0.45f, 0.92f),   // violet
+            new Color(0.20f, 0.80f, 0.66f),   // teal
+            new Color(0.98f, 0.62f, 0.25f),   // tangerine
+            new Color(0.92f, 0.40f, 0.62f),   // rose
+        };
+        static int _bubbleIndex;
 
         static readonly Color Ink    = new Color(0.96f, 0.96f, 0.98f);
         static readonly Color Dim    = new Color(1f, 1f, 1f, 0.55f);
@@ -34,6 +47,8 @@ namespace Party.EditorTools
         {
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
                  ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _bubble = GradientTextures.Bubble("BubbleButton");
+            _bubbleIndex = 0;
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -176,51 +191,73 @@ namespace Party.EditorTools
             GameObject stage = new GameObject("Stage");
             MenuStage ms = stage.AddComponent<MenuStage>();
 
-            // Sunburst - alternating wedges radiating behind the contestant.
-            GameObject burst = new GameObject("Sunburst");
-            burst.transform.SetParent(stage.transform, false);
-            burst.transform.position = new Vector3(0f, 0.4f, 7.5f);
-            Material warm = MenuStage.Unlit(new Color(0.99f, 0.55f, 0.22f));
-            Material deep = MenuStage.Unlit(new Color(0.92f, 0.33f, 0.30f));
-            for (int i = 0; i < 18; i++)
-            {
-                GameObject wedge = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                Object.DestroyImmediate(wedge.GetComponent<Collider>());
-                wedge.transform.SetParent(burst.transform, false);
-                wedge.transform.localRotation = Quaternion.Euler(0f, 0f, i * (360f / 18f));
-                wedge.transform.localScale = new Vector3(1.5f, 26f, 1f);
-                wedge.transform.localPosition = Vector3.zero;
-                wedge.GetComponent<Renderer>().sharedMaterial = (i % 2 == 0) ? warm : deep;
-            }
-            ms.sunburst = burst.transform;
+            // A SOFT RADIAL GRADIENT, not wedges.
+            //
+            // The first version used 18 flat sunburst quads. Hard edges alias, the quads
+            // z-fought where they overlapped, and two clashing flats read as cheap. One
+            // smooth gradient has no edges to alias and no seams to fight.
+            Texture2D grad = GradientTextures.Radial(
+                "BackdropGradient",
+                new Color(0.36f, 0.16f, 0.34f),   // warm plum centre
+                new Color(0.05f, 0.05f, 0.12f),   // deep midnight edge
+                768, 1.15f);
+            Material backMat = GradientTextures.UnlitTex("BackdropMat", grad, Color.white);
 
-            // A big flat disc behind the sunburst so gaps do not show sky.
             GameObject back = GameObject.CreatePrimitive(PrimitiveType.Quad);
             Object.DestroyImmediate(back.GetComponent<Collider>());
             back.name = "Backdrop";
             back.transform.SetParent(stage.transform, false);
-            back.transform.position = new Vector3(0f, 0.4f, 8.4f);
-            back.transform.localScale = new Vector3(46f, 30f, 1f);
-            back.GetComponent<Renderer>().sharedMaterial = MenuStage.Unlit(new Color(0.30f, 0.10f, 0.26f));
+            back.transform.position = new Vector3(0f, 0.6f, 9.5f);
+            back.transform.localScale = new Vector3(44f, 26f, 1f);
+            back.GetComponent<Renderer>().sharedMaterial = backMat;
 
-            // Spotlights on the podium.
-            var lights = new System.Collections.Generic.List<Light>();
-            Color[] spotCols = { new Color(1f,0.55f,0.75f), new Color(0.55f,0.75f,1f), new Color(1f,0.9f,0.6f) };
-            for (int i = 0; i < 3; i++)
+            // A second, larger, dimmer pass behind it adds depth without adding edges.
+            GameObject halo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Object.DestroyImmediate(halo.GetComponent<Collider>());
+            halo.name = "BackdropHalo";
+            halo.transform.SetParent(stage.transform, false);
+            halo.transform.position = new Vector3(0f, 0.6f, 11.5f);
+            halo.transform.localScale = new Vector3(70f, 40f, 1f);
+            halo.GetComponent<Renderer>().sharedMaterial = GradientTextures.UnlitTex(
+                "BackdropHaloMat", grad, new Color(1f, 0.85f, 0.9f, 0.5f), true);
+
+            // BOKEH, not confetti. Soft out-of-focus dots drifting, which depth of field
+            // then blurs further. Hard-edged chips are what made it look like debris.
+            Texture2D dot = GradientTextures.Bokeh("BokehDot");
+            ms.bokehMaterials = new[]
             {
-                GameObject lg = new GameObject("Spot" + i);
-                lg.transform.SetParent(stage.transform, false);
-                float a = -50f + i * 50f;
-                lg.transform.position = Quaternion.Euler(0f, a, 0f) * new Vector3(0f, 4.2f, -4.6f);
-                lg.transform.LookAt(new Vector3(0f, -0.3f, 0f));
-                Light L = lg.AddComponent<Light>();
-                L.type = LightType.Spot; L.range = 22f; L.spotAngle = 46f;
-                L.intensity = 14f; L.color = spotCols[i];
-                L.shadows = LightShadows.None;
-                lights.Add(L);
-            }
+                GradientTextures.UnlitTex("Bokeh0", dot, new Color(1f, 0.72f, 0.55f, 0.30f), true),
+                GradientTextures.UnlitTex("Bokeh1", dot, new Color(0.70f, 0.80f, 1f, 0.26f), true),
+                GradientTextures.UnlitTex("Bokeh2", dot, new Color(1f, 0.90f, 0.75f, 0.22f), true),
+            };
+            ms.area = new Vector3(20f, 12f, 7f);
+
+            // Restrained lighting: one warm key, one cool fill. Three saturated spotlights
+            // fought each other and blew the chassis out.
+            var lights = new List<Light>();
+            GameObject warmGo = new GameObject("Warm Spot");
+            warmGo.transform.SetParent(stage.transform, false);
+            warmGo.transform.position = new Vector3(2.6f, 3.4f, -3.4f);
+            warmGo.transform.LookAt(new Vector3(0f, -0.2f, 0f));
+            Light warmL = warmGo.AddComponent<Light>();
+            warmL.type = LightType.Spot; warmL.range = 20f; warmL.spotAngle = 52f;
+            warmL.intensity = 7f; warmL.color = new Color(1f, 0.86f, 0.72f);
+            warmL.shadows = LightShadows.Soft;
+            lights.Add(warmL);
+
+            GameObject coolGo = new GameObject("Cool Fill");
+            coolGo.transform.SetParent(stage.transform, false);
+            coolGo.transform.position = new Vector3(-3.2f, 2.4f, -2.2f);
+            coolGo.transform.LookAt(new Vector3(0f, -0.2f, 0f));
+            Light coolL = coolGo.AddComponent<Light>();
+            coolL.type = LightType.Spot; coolL.range = 18f; coolL.spotAngle = 60f;
+            coolL.intensity = 3.2f; coolL.color = new Color(0.62f, 0.74f, 1f);
+            coolL.shadows = LightShadows.None;
+            lights.Add(coolL);
+
             ms.pulseLights = lights.ToArray();
-            ms.area = new Vector3(18f, 11f, 5f);
+            ms.pulseAmount = 0.10f;   // a breath, not a disco
+            ms.pulseSpeed = 0.7f;
         }
 
         // ---------- panels ----------
@@ -384,6 +421,9 @@ namespace Party.EditorTools
             GameObject go = UI(name, parent);
             Place(go, anchor, pos, size);
             Image img = go.AddComponent<Image>();
+            img.sprite = _bubble;
+            img.type = Image.Type.Sliced;      // 9-slice: corners stay round at any size
+            img.pixelsPerUnitMultiplier = 1.6f;
             img.color = colour;
             Button b = go.AddComponent<Button>();
             b.targetGraphic = img;
@@ -423,8 +463,8 @@ namespace Party.EditorTools
             => VoidButton(parent, text, TR, new Vector2(-64f, y), new Vector2(430f, 96f), c, size, method);
 
         static void NavButton(Transform parent, string text, float y, int panel)
-            => IntButton(parent, text, text, TR, new Vector2(-64f, y), new Vector2(430f, 66f),
-                         new Color(1f, 1f, 1f, 0.13f), 26, nameof(MainMenu.Show), panel);
+            => IntButton(parent, text, text, TR, new Vector2(-64f, y), new Vector2(430f, 72f),
+                         BubbleCols[_bubbleIndex++ % BubbleCols.Length], 26, nameof(MainMenu.Show), panel);
 
         static void Back(Transform parent, float y, float extraX)
             => IntButton(parent, "Back", "BACK", TR, new Vector2(-64f + extraX, y), new Vector2(200f, 54f),
@@ -436,7 +476,10 @@ namespace Party.EditorTools
             GameObject go = UI(name, parent);
             Place(go, anchor, pos, size);
             Image bg = go.AddComponent<Image>();
-            bg.color = Slate;
+            bg.sprite = _bubble;
+            bg.type = Image.Type.Sliced;
+            bg.pixelsPerUnitMultiplier = 2.2f;
+            bg.color = new Color(1f, 1f, 1f, 0.16f);
             Text text = Label(go.transform, "Text", "", 24, new Vector2(0.5f, 0.5f), Vector2.zero,
                               size - new Vector2(28f, 10f), TextAnchor.MiddleLeft, Ink);
             text.raycastTarget = true;
@@ -452,12 +495,12 @@ namespace Party.EditorTools
         {
             Label(parent, caption + "Cap", caption, 18, TR, new Vector2(-64f, y),
                   new Vector2(560f, 24f), TextAnchor.UpperRight, Dim);
-            IntButton(parent, caption + "-", "<", TR, new Vector2(-490f, y - 24f), new Vector2(52f, 44f),
-                      Slate, 24, nameof(MainMenu.StepLook), row * 10 + 0);
+            IntButton(parent, caption + "-", "<", TR, new Vector2(-490f, y - 24f), new Vector2(54f, 46f),
+                      new Color(0.42f, 0.55f, 0.85f), 24, nameof(MainMenu.StepLook), row * 10 + 0);
             Text v = Label(parent, caption + "Val", "-", 26, TR, new Vector2(-124f, y - 24f),
                            new Vector2(360f, 44f), TextAnchor.MiddleCenter, Ink);
-            IntButton(parent, caption + "+", ">", TR, new Vector2(-64f, y - 24f), new Vector2(52f, 44f),
-                      Slate, 24, nameof(MainMenu.StepLook), row * 10 + 1);
+            IntButton(parent, caption + "+", ">", TR, new Vector2(-64f, y - 24f), new Vector2(54f, 46f),
+                      new Color(0.42f, 0.55f, 0.85f), 24, nameof(MainMenu.StepLook), row * 10 + 1);
             return v;
         }
 
@@ -465,12 +508,12 @@ namespace Party.EditorTools
         {
             Label(parent, caption + "Cap", caption, 20, TR, new Vector2(-64f, y),
                   new Vector2(560f, 26f), TextAnchor.UpperRight, Dim);
-            IntButton(parent, caption + "-", "<", TR, new Vector2(-490f, y - 26f), new Vector2(52f, 44f),
-                      Slate, 24, method, -1);
+            IntButton(parent, caption + "-", "<", TR, new Vector2(-490f, y - 26f), new Vector2(54f, 46f),
+                      new Color(0.42f, 0.55f, 0.85f), 24, method, -1);
             Text v = Label(parent, caption + "Val", "-", 24, TR, new Vector2(-124f, y - 26f),
                            new Vector2(360f, 44f), TextAnchor.MiddleCenter, Ink);
-            IntButton(parent, caption + "+", ">", TR, new Vector2(-64f, y - 26f), new Vector2(52f, 44f),
-                      Slate, 24, method, 1);
+            IntButton(parent, caption + "+", ">", TR, new Vector2(-64f, y - 26f), new Vector2(54f, 46f),
+                      new Color(0.42f, 0.55f, 0.85f), 24, method, 1);
             return v;
         }
     }

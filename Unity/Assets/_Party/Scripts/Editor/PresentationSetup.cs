@@ -104,14 +104,23 @@ namespace Party.EditorTools
             tm.mode.overrideState = true; tm.mode.value = TonemappingMode.ACES;
 
             Bloom bl = Persist<Bloom>();
-            bl.intensity.overrideState = true; bl.intensity.value = 0.9f;
+            bl.intensity.overrideState = true; bl.intensity.value = 1.15f;
             bl.threshold.overrideState = true; bl.threshold.value = 1.05f;
             bl.scatter.overrideState = true;   bl.scatter.value = 0.62f;
 
             ColorAdjustments ca = Persist<ColorAdjustments>();
             ca.postExposure.overrideState = true; ca.postExposure.value = 0.25f;
-            ca.contrast.overrideState = true;     ca.contrast.value = 18f;
-            ca.saturation.overrideState = true;   ca.saturation.value = 22f;
+            ca.contrast.overrideState = true;     ca.contrast.value = 12f;
+            ca.saturation.overrideState = true;   ca.saturation.value = 8f;   // restrained
+
+            // DEPTH OF FIELD is the biggest single step from "prototype" to "produced":
+            // a sharp subject against a softly blurred background reads as a photograph
+            // rather than a flat render, and it hides geometry simplicity for free.
+            DepthOfField dof = Persist<DepthOfField>();
+            dof.mode.overrideState = true;          dof.mode.value = DepthOfFieldMode.Bokeh;
+            dof.focusDistance.overrideState = true; dof.focusDistance.value = 9.2f;
+            dof.aperture.overrideState = true;      dof.aperture.value = 8f;
+            dof.focalLength.overrideState = true;   dof.focalLength.value = 62f;
 
             Vignette vg = Persist<Vignette>();
             vg.intensity.overrideState = true; vg.intensity.value = 0.32f;
