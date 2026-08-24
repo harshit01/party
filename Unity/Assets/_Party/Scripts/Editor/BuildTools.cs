@@ -22,6 +22,11 @@ namespace Party.EditorTools
         [MenuItem("Party/Build/macOS")]
         public static void BuildMac() => Run(BuildTarget.StandaloneOSX, "Build/Mac/Party.app");
 
+        /// <summary>Red Light scene only - used by the headless round test.</summary>
+        public static void BuildMacRedLight() =>
+            Run(BuildTarget.StandaloneOSX, "Build/MacRedLight/Party.app",
+                "Assets/_Party/Scenes/RedLight.unity");
+
         [MenuItem("Party/Build/Windows x64")]
         public static void BuildWindows() => Run(BuildTarget.StandaloneWindows64, "Build/Windows/Party.exe");
 
@@ -50,11 +55,11 @@ namespace Party.EditorTools
             Debug.Log($"[Build] steam_appid.txt -> {dest}");
         }
 
-        static void Run(BuildTarget target, string outPath)
+        static void Run(BuildTarget target, string outPath, string sceneOverride = null)
         {
             var opts = new BuildPlayerOptions
             {
-                scenes           = new[] { Scene },
+                scenes           = new[] { sceneOverride ?? Scene },
                 locationPathName = outPath,
                 target           = target,
                 options          = BuildOptions.Development,

@@ -1,4 +1,6 @@
 using kcp2k;
+using Party.Juice;
+using UnityEngine.Rendering.Universal;
 using Mirror;
 using Party.RedLight;
 using UnityEditor;
@@ -18,8 +20,33 @@ namespace Party.EditorTools
     /// </summary>
     public static class RedLightSetup
     {
-        const string ScenePath  = "Assets/_Party/Scenes/RedLight.unity";
-        const string PrefabPath = "Assets/_Party/Prefabs/PartyPlayer.prefab";
+        const string ScenePath    = "Assets/_Party/Scenes/RedLight.unity";
+        const string PrefabPath   = "Assets/_Party/Prefabs/PartyPlayer.prefab";
+        const string DirectorPath = "Assets/_Party/Prefabs/RedLightDirector.prefab";
+
+        /// <summary>
+        /// The director is a PREFAB spawned by the server, never a scene object.
+        ///
+        /// Mirror's build-time scene post-processor disables any scene object carrying a
+        /// NetworkIdentity so the server can spawn it on demand. Putting the director on
+        /// the NetworkManager object therefore disabled the whole networking object in
+        /// the build - silently, with no error in the player, while still working in the
+        /// editor. Mirror warns about this at build time; heed it.
+        /// </summary>
+        static GameObject BuildDirectorPrefab()
+        {
+            GameObject go = new GameObject("RedLightDirector");
+            go.AddComponent<NetworkIdentity>();
+            go.AddComponent<HostVoice>();
+            RedLightDirector d = go.AddComponent<RedLightDirector>();
+            d.startZ = -12f;
+            d.finishZ = 14f;
+
+            System.IO.Directory.CreateDirectory("Assets/_Party/Prefabs");
+            GameObject asset = PrefabUtility.SaveAsPrefabAsset(go, DirectorPath);
+            Object.DestroyImmediate(go);
+            return asset;
+        }
 
         [MenuItem("Party/Rebuild Red Light scene")]
         public static void Build()
@@ -34,28 +61,42 @@ namespace Party.EditorTools
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+            const float HalfWidth = 8f;
+
             // A long lane rather than an open plane: Red Light needs a direction to run in.
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Lane";
             ground.transform.localScale = new Vector3(1.6f, 1f, 3.4f);
+            ground.GetComponent<Renderer>().sharedMaterial =
+                PresentationSetup.Lit("Lane", new Color(0.30f, 0.33f, 0.40f), 0.18f);
 
-            MakeStripe("StartLine",  -12f, new Color(0.85f, 0.85f, 0.85f));
-            MakeStripe("FinishLine",  14f, new Color(0.95f, 0.82f, 0.2f));
+            MakeStripe("StartLine",  -12f, new Color(0.90f, 0.92f, 0.96f));
+            MakeStripe("FinishLine",  14f, new Color(0.98f, 0.80f, 0.25f));
+
+            PresentationSetup.Barriers(HalfWidth, -20f, 20f);
+            PresentationSetup.FinishGantry(14f, HalfWidth);
+            PresentationSetup.Crowd(HalfWidth, -18f, 18f);
 
             GameObject lightGo = new GameObject("Directional Light");
-            Light l = lightGo.AddComponent<Light>();
-            l.type = LightType.Directional; l.intensity = 1.1f; l.shadows = LightShadows.Soft;
-            lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            lightGo.AddComponent<Light>().type = LightType.Directional;
+            PresentationSetup.Lighting(lightGo);
+            PresentationSetup.GlobalVolume();
 
-            // Camera behind the start line looking up the lane - players see the finish,
-            // and Barnaby's banner sits above it.
+            // Broadcast camera: follows the leader, punches on STOP, pushes in on the win.
             GameObject camGo = new GameObject("Main Camera");
             camGo.tag = "MainCamera";
             Camera cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.Skybox;
+            cam.fieldOfView = 52f;
             camGo.transform.position = new Vector3(0f, 12f, -26f);
-            camGo.transform.rotation = Quaternion.Euler(28f, 0f, 0f);
+            camGo.transform.rotation = Quaternion.Euler(24f, 0f, 0f);
             camGo.AddComponent<AudioListener>();
+            camGo.AddComponent<CameraRig>();
+
+            UniversalAdditionalCameraData cd = camGo.GetComponent<UniversalAdditionalCameraData>();
+            if (cd == null) cd = camGo.AddComponent<UniversalAdditionalCameraData>();
+            cd.renderPostProcessing = true;   // without this the volume does nothing
+            cd.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
 
             GameObject netGo = new GameObject("NetworkManager");
             KcpTransport kcp = netGo.AddComponent<KcpTransport>();
@@ -72,17 +113,13 @@ namespace Party.EditorTools
 
             netGo.AddComponent<SteamLobby>();
             netGo.AddComponent<PartyHUD>();
-            netGo.AddComponent<HostVoice>();
-
-            RedLightDirector dir = netGo.AddComponent<RedLightDirector>();
-            dir.startZ = -12f;
-            dir.finishZ = 14f;
-
             netGo.AddComponent<RedLightHUD>();
             netGo.AddComponent<MilestoneAutoRun>();
 
-            // The director is a NetworkBehaviour, so it needs an identity to replicate.
-            netGo.AddComponent<NetworkIdentity>();
+            // Director as a server-spawned prefab. NO NetworkIdentity on this object.
+            GameObject directorPrefab = BuildDirectorPrefab();
+            nm.serverSpawnOnStart = new[] { directorPrefab };
+            nm.spawnPrefabs.Add(directorPrefab);
 
             for (int i = 0; i < 8; i++)
             {
@@ -110,7 +147,8 @@ namespace Party.EditorTools
             s.transform.position = new Vector3(0f, 0.02f, z);
             s.transform.localScale = new Vector3(16f, 0.04f, 0.5f);
             Object.DestroyImmediate(s.GetComponent<BoxCollider>());
-            s.GetComponent<Renderer>().sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit")) { color = c };
+            s.GetComponent<Renderer>().sharedMaterial =
+                PresentationSetup.Lit(name, c, 0.5f, 0f, c * 0.35f);
         }
     }
 }

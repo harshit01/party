@@ -34,6 +34,12 @@ namespace Party
             "Gusset", "Hobb", "Larkspur", "Mullion",
         };
 
+        [Header("Server-spawned singletons")]
+        [Tooltip("Prefabs spawned once when the server starts - round directors and the like. " +
+                 "They must be PREFABS: Mirror's scene post-processor disables any scene object " +
+                 "carrying a NetworkIdentity, which silently kills it in a build.")]
+        public GameObject[] serverSpawnOnStart;
+
         [Header("Transport selection")]
         [Tooltip("Direct-IP transport. Used for local and LAN testing.")]
         public Transport localTransport;
@@ -86,6 +92,15 @@ namespace Party
             base.OnStartServer();
             _bots.Clear();
             _nextSlot = 0;
+
+            if (serverSpawnOnStart != null)
+                foreach (GameObject prefab in serverSpawnOnStart)
+                {
+                    if (prefab == null) continue;
+                    NetworkServer.Spawn(Instantiate(prefab));
+                    Debug.Log($"[Party] server-spawned {prefab.name}");
+                }
+
             FillWithBots();
         }
 

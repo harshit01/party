@@ -11,12 +11,9 @@ namespace Party.RedLight
     /// </summary>
     public class RedLightHUD : MonoBehaviour
     {
-        RedLightDirector _dir;
-
-        void Awake()
-        {
-            _dir = GetComponent<RedLightDirector>();
-        }
+        // The director lives on a server-spawned object, not on this GameObject, so it
+        // is looked up rather than fetched with GetComponent.
+        RedLightDirector _dir => RedLightDirector.Instance;
 
         void OnGUI()
         {

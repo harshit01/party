@@ -33,8 +33,18 @@ namespace Party
             return fallback;
         }
 
+        string _shotPath;
+        float  _shotAt = -1f;
+
         void Start()
         {
+            // Runtime capture. An edit-mode cam.Render() in batchmode lacks proper
+            // lighting/ambient data and produced a uniformly gold image that had nothing
+            // to do with the actual materials - so presentation must be verified from a
+            // real running player, not from the editor's offline renderer.
+            _shotPath = Arg("-partyshot");
+            if (!string.IsNullOrEmpty(_shotPath)) _shotAt = 7f;
+
             _nm = GetComponent<NetworkManager>();
             _role = Arg("-partyrole", "none");
 
@@ -52,7 +62,9 @@ namespace Party
 
             switch (_role)
             {
-                case "host":   Debug.Log("[AutoRun] starting HOST");   _nm.StartHost();   break;
+                case "host":   Debug.Log("[AutoRun] starting HOST");   _nm.StartHost();
+                               if (Arg("-partyround") != null) Invoke(nameof(BeginRound), 2f);
+                               break;
                 case "server": Debug.Log("[AutoRun] starting SERVER"); _nm.StartServer(); break;
                 case "client": Debug.Log("[AutoRun] starting CLIENT to " + _nm.networkAddress);
                                _nm.StartClient(); break;
@@ -70,12 +82,28 @@ namespace Party
                 Report();
             }
 
+            if (_shotAt > 0f && Time.time >= _shotAt)
+            {
+                _shotAt = -1f;
+                ScreenCapture.CaptureScreenshot(_shotPath);
+                Debug.Log($"[AutoRun] screenshot -> {_shotPath}");
+            }
+
             if (_quitAt > 0f && Time.time >= _quitAt)
             {
                 Debug.Log("[AutoRun] duration elapsed, quitting");
                 _nm.StopHost(); _nm.StopClient();
                 Application.Quit();
             }
+        }
+
+        /// <summary>Kick off a Red Light round from the command line, for headless testing.</summary>
+        void BeginRound()
+        {
+            var d = RedLight.RedLightDirector.Instance;
+            if (d == null) { Debug.LogError("[AutoRun] -partyround but no RedLightDirector in scene"); return; }
+            Debug.Log("[AutoRun] beginning round");
+            d.BeginRound();
         }
 
         void Report()
@@ -90,6 +118,11 @@ namespace Party
               .Append(" nt=").Append(NetworkTime.time.ToString("F1"))
               .Append(" t=").Append(Time.time.ToString("F1"))
               .Append(" count=").Append(all.Length);
+
+            var dir = RedLight.RedLightDirector.Instance;
+            if (dir != null)
+                sb.Append(" phase=").Append(dir.phase)
+                  .Append(" call=\"").Append(dir.callText).Append('"');
 
             System.Array.Sort(all, (x, y) => string.CompareOrdinal(x.displayName, y.displayName));
             foreach (PartyPlayer p in all)

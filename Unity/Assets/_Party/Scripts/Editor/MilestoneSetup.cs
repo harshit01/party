@@ -1,4 +1,5 @@
 using kcp2k;
+using Party.Juice;
 using Mirror;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -36,17 +37,70 @@ namespace Party.EditorTools
             return f;
         }
 
+        /// <summary>
+        /// Body + face, built from primitives.
+        ///
+        /// The VISUAL is a child of the networked root. NetworkTransform replicates the
+        /// root; squash, stretch and lean happen on the child, so the juice can never
+        /// fight the netcode.
+        /// </summary>
+        static (Transform visual, Transform face, Renderer body) BuildBody(GameObject root)
+        {
+            GameObject visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            body.name = "Body";
+            Object.DestroyImmediate(body.GetComponent<Collider>());
+            body.transform.SetParent(visual.transform, false);
+
+            // A face gives a capsule a front, and a front is most of what makes it a
+            // character rather than a marker.
+            GameObject face = new GameObject("Face");
+            face.transform.SetParent(visual.transform, false);
+            face.transform.localPosition = new Vector3(0f, 0.42f, 0f);
+
+            Material white = PresentationSetup.Lit("EyeWhite", Color.white, 0.55f);
+            Material pupil = PresentationSetup.Lit("EyePupil", new Color(0.06f, 0.06f, 0.09f), 0.7f);
+
+            for (int s = -1; s <= 1; s += 2)
+            {
+                GameObject eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                eye.name = s < 0 ? "EyeL" : "EyeR";
+                Object.DestroyImmediate(eye.GetComponent<Collider>());
+                eye.transform.SetParent(face.transform, false);
+                eye.transform.localPosition = new Vector3(s * 0.17f, 0f, 0.36f);
+                eye.transform.localScale = Vector3.one * 0.26f;
+                eye.GetComponent<Renderer>().sharedMaterial = white;
+
+                GameObject p2 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                p2.name = "Pupil";
+                Object.DestroyImmediate(p2.GetComponent<Collider>());
+                p2.transform.SetParent(eye.transform, false);
+                p2.transform.localPosition = new Vector3(0f, 0f, 0.34f);
+                p2.transform.localScale = Vector3.one * 0.55f;
+                p2.GetComponent<Renderer>().sharedMaterial = pupil;
+            }
+
+            return (visual.transform, face.transform, body.GetComponent<Renderer>());
+        }
+
         static GameObject BuildPlayerPrefab()
         {
-            GameObject root = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            root.name = "PartyPlayer";
-            Object.DestroyImmediate(root.GetComponent<CapsuleCollider>());
+            GameObject root = new GameObject("PartyPlayer");
+
+            var (visual, face, bodyRend) = BuildBody(root);
 
             CapsuleCollider col = root.AddComponent<CapsuleCollider>();
             col.height = 2f; col.radius = 0.5f;
 
             Rigidbody rb = root.AddComponent<Rigidbody>();
             rb.mass = 1f;
+            // Damping matters more than it looks: without it a capsule coasts for about
+            // a metre after you release the keys, so EVERY freeze registers as movement
+            // and the first STOP eliminates the entire lobby. Physics still does the
+            // acting - it just does not skate.
+            rb.linearDamping = 4.5f;
             rb.constraints = RigidbodyConstraints.FreezeRotation;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
 
@@ -58,7 +112,8 @@ namespace Party.EditorTools
             nt.syncRotation  = false;   // capsules do not rotate; saves bandwidth
             nt.syncScale     = false;
 
-            // Name label
+            // Name label - parented to the ROOT, not the visual, so squash and lean
+            // never wobble the text.
             GameObject tag = new GameObject("NameTag");
             tag.transform.SetParent(root.transform, false);
             tag.transform.localPosition = new Vector3(0f, 1.6f, 0f);
@@ -74,9 +129,13 @@ namespace Party.EditorTools
 
             PartyPlayer pp = root.AddComponent<PartyPlayer>();
             SerializedObject so = new SerializedObject(pp);
-            so.FindProperty("bodyRenderer").objectReferenceValue = root.GetComponent<MeshRenderer>();
+            so.FindProperty("bodyRenderer").objectReferenceValue = bodyRend;
             so.FindProperty("nameTag").objectReferenceValue = tm;
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            PlayerJuice juice = root.AddComponent<PlayerJuice>();
+            juice.visual = visual;
+            juice.face   = face;
 
             System.IO.Directory.CreateDirectory("Assets/_Party/Prefabs");
             GameObject asset = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);

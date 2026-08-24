@@ -36,13 +36,13 @@ namespace Party.RedLight
         [Header("Timing")]
         public float countdownSeconds = 3f;
         public Vector2 goDuration   = new Vector2(1.6f, 4.5f);
-        public Vector2 stopDuration = new Vector2(1.8f, 3.2f);
+        public Vector2 stopDuration = new Vector2(1.6f, 2.8f);
 
         [Header("Judging")]
         [Tooltip("Movement beyond this during STOP counts as moving.")]
-        public float moveThreshold = 0.45f;
+        public float moveThreshold = 0.75f;
         [Tooltip("Baseline grace after STOP is called, on top of each player's RTT.")]
-        public float baseGrace = 0.35f;
+        public float baseGrace = 0.65f;
 
         // ---- replicated round state ----
         [SyncVar(hook = nameof(OnPhaseChanged))] public RoundPhase phase = RoundPhase.Waiting;
@@ -58,6 +58,7 @@ namespace Party.RedLight
         readonly Dictionary<uint, Vector3> _freezeSnapshot = new Dictionary<uint, Vector3>();
         bool   _snapshotTaken;
         double _judgeAt;
+        int    _stopsThisRound, _spares, _frames;
 
         void Awake()
         {
@@ -79,6 +80,7 @@ namespace Party.RedLight
         {
             round++;
             _freezeSnapshot.Clear();
+            _stopsThisRound = _spares = _frames = 0;
             foreach (PartyPlayer p in Players())
             {
                 p.eliminated = false;
@@ -145,10 +147,14 @@ namespace Party.RedLight
         [Server] void CallStop()
         {
             callText = HostPhrases.Stop();
+            _stopsThisRound++;
             // Announce now, judge later. Grace = interpolation buffer + slowest RTT.
             _snapshotTaken = false;
-            _judgeAt = NetworkTime.time + baseGrace + WorstRtt();
-            SetPhase(RoundPhase.Grace, baseGrace + WorstRtt());
+            // Compute the window ONCE - calling WorstRtt() twice could hand the snapshot
+            // and the phase two different deadlines and judge before the grace elapsed.
+            double grace = baseGrace + WorstRtt();
+            _judgeAt = NetworkTime.time + grace;
+            SetPhase(RoundPhase.Grace, (float)grace);
         }
 
         [Server] double WorstRtt()
@@ -182,6 +188,8 @@ namespace Party.RedLight
                 {
                     // He saw it. He is choosing not to have seen it.
                     verdictText = $"{p.displayName} moved. Barnaby looks the other way.";
+                    _spares++;
+                    Debug.Log($"[RedLight] SPARED {p.displayName} (standing={_bias.Describe(p.netId)})");
                     _freezeSnapshot[p.netId] = p.transform.position;   // fresh baseline, so it is a real reprieve
                     continue;
                 }
@@ -196,6 +204,7 @@ namespace Party.RedLight
         [Server] void Eliminate(PartyPlayer p, string reason)
         {
             p.eliminated = true;
+            if (reason == "framed") _frames++;
             _bias.Nudge(p.netId, -0.1f);   // being called out sours things further
 
             verdictText = reason == "framed"
@@ -216,6 +225,7 @@ namespace Party.RedLight
                 p.finished = true;
                 verdictText = $"{p.displayName} reaches the line!";
                 SetPhase(RoundPhase.Finished, 0f);
+                Summarise("winner:" + p.displayName);
                 if (_voice != null) _voice.PrefetchFinale(p.displayName, Players());
                 return;
             }
@@ -226,11 +236,20 @@ namespace Party.RedLight
             {
                 verdictText = "Nobody survived. Barnaby is delighted.";
                 SetPhase(RoundPhase.Finished, 0f);
+                Summarise("wipeout");
             }
         }
 
+        [Server] void Summarise(string outcome)
+        {
+            int stops = _stopsThisRound, outs = 0;
+            foreach (PartyPlayer p in Players()) if (p.eliminated) outs++;
+            Debug.Log($"[RedLight] ROUND {round} END outcome={outcome} stops={stops} " +
+                      $"eliminated={outs} spared={_spares} framed={_frames}");
+        }
+
         public static IEnumerable<PartyPlayer> Players() =>
-            Object.FindObjectsByType<PartyPlayer>(FindObjectsSortMode.None);
+            Object.FindObjectsByType<PartyPlayer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
 
         /// <summary>May this player move right now? Consulted by PartyPlayer.</summary>
         public bool MovementAllowed(PartyPlayer p)

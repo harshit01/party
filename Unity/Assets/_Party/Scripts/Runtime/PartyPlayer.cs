@@ -115,8 +115,8 @@ namespace Party
             // A round may forbid movement entirely (eliminated, finished, countdown).
             // Note this does NOT stop a player pressing keys during STOP - moving when
             // told to freeze is exactly the mistake the game is about.
-            RedLight.RedLightDirector dir = RedLight.RedLightDirector.Instance;
-            if (dir != null && !dir.MovementAllowed(this))
+            RedLight.RedLightDirector director = RedLight.RedLightDirector.Instance;
+            if (director != null && !director.MovementAllowed(this))
             {
                 _pendingMove = Vector2.zero;
                 Vector3 v = _rb.linearVelocity;
