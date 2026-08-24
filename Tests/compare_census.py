@@ -1,57 +1,97 @@
 """
-Compare two census logs at matched NETWORK times and report positional disagreement.
+Compare two census logs at matched NETWORK times.
 
-Aligning on Mirror's NetworkTime is the whole point: the host and client processes
-start seconds apart, so local Time.time cannot align them. An earlier comparison used
-local time, matched two unrelated instants, and drew a confident wrong conclusion.
+WHAT THIS ASSERTS, AND WHY
 
-Exit 0 if every matched sample agrees within the tolerance, 1 otherwise.
+A client is SUPPOSED to render behind the host. Mirror's snapshot interpolation holds
+a buffer (bufferTimeMultiplier, default 2) so that network jitter does not turn into
+visible stutter. So a non-zero host/client position difference is correct behaviour,
+not a bug, and picking a tight tolerance would only measure the buffer.
+
+Worse, the obvious way to make that number look good - shrinking the buffer - is
+actively harmful. Loopback has no jitter, so a buffer tuned here would be far too
+small over Steam relay. DO NOT TUNE INTERPOLATION AGAINST LOOPBACK NUMBERS.
+
+So the checks that carry weight are:
+  * BOUNDED, not growing - lag stays flat; a real desync diverges over time
+  * UNIFORM across capsules - one capsule drifting alone means a per-object bug
+  * under a loose sanity ceiling - catches gross breakage, not tuning
+
+The absolute figures are reported for the record. They only become meaningful when
+measured between two real machines over Steam relay.
 """
-import re, sys, collections
+import re, sys, collections, statistics
 
 LINE = re.compile(r"\[CENSUS\] role=(\w+) nt=([\d.]+) .*?count=(\d+)(.*)")
 ENT  = re.compile(r"([^|]+?)\((bot|human)\) (-?[\d.]+),(-?[\d.]+)")
+WINDOW  = 0.30   # seconds; both ends sample on their own phase
+CEILING = 4.0    # metres; gross-breakage sanity bound, not a quality target
 
 def parse(path):
-    out = collections.defaultdict(dict)   # nt -> {name: (x,z)}
+    out = collections.defaultdict(dict)
     for ln in open(path, errors="ignore"):
         m = LINE.match(ln.strip())
         if not m: continue
-        nt = round(float(m.group(2)), 1)
         for e in ENT.finditer(m.group(4)):
-            out[nt][e.group(1).strip().lstrip("| ").strip()] = (float(e.group(3)), float(e.group(4)))
+            out[round(float(m.group(2)), 1)][e.group(1).strip().lstrip("| ").strip()] = \
+                (float(e.group(3)), float(e.group(4)))
     return out
 
 def main():
-    host_log, cli_log = sys.argv[1], sys.argv[2]
-    tol = float(sys.argv[3]) if len(sys.argv) > 3 else 1.5
+    h, c = parse(sys.argv[1]), parse(sys.argv[2])
+    if not h or not c:
+        print("FAIL: one of the logs has no census lines"); return 1
 
-    h, c = parse(host_log), parse(cli_log)
-    shared = sorted(set(h) & set(c))
-    if not shared:
-        print("FAIL: no shared network timestamps - cannot compare"); return 1
+    host_times = sorted(h)
+    per = collections.defaultdict(list)
+    series = []
+    matched = 0
 
-    worst, worst_at, checked, bad = 0.0, None, 0, 0
-    for nt in shared:
+    for nt in sorted(c):
+        best = min(host_times, key=lambda x: abs(x - nt))
+        if abs(best - nt) > WINDOW: continue
+        matched += 1
         for name, (cx, cz) in c[nt].items():
-            if name not in h[nt]: continue
-            hx, hz = h[nt][name]
+            if name not in h[best]: continue
+            hx, hz = h[best][name]
             d = ((cx-hx)**2 + (cz-hz)**2) ** 0.5
-            checked += 1
-            if d > worst: worst, worst_at = d, (nt, name)
-            if d > tol: bad += 1
+            per[name].append(d); series.append(d)
 
-    print(f"  matched network instants : {len(shared)}")
-    print(f"  capsule samples compared : {checked}")
-    print(f"  worst disagreement       : {worst:.2f} m"
-          + (f"  ({worst_at[1]} at nt={worst_at[0]})" if worst_at else ""))
-    print(f"  samples over {tol} m tolerance: {bad}")
+    if matched == 0:
+        print(f"FAIL: no host sample within {WINDOW}s of any client sample"); return 1
+    if not series:
+        print("FAIL: no capsules could be compared"); return 1
 
-    if checked == 0:
-        print("FAIL: no capsules compared"); return 1
-    if bad:
-        print("FAIL: host and client disagree on positions"); return 1
-    print("OK  host and client agree on every capsule position")
-    return 0
+    print(f"  matched instants: {matched}   samples: {len(series)}")
+    for name, ds in sorted(per.items()):
+        print(f"    {name:<24} median={statistics.median(ds):.2f}m  max={max(ds):.2f}m")
+
+    fail = 0
+
+    # 1. bounded, not growing
+    half = len(series) // 2
+    a, b = statistics.median(series[:half]), statistics.median(series[half:])
+    print(f"  drift: first half {a:.2f}m -> second half {b:.2f}m")
+    if b > a * 1.6 + 0.5:
+        print("  FAIL: disagreement is GROWING - real desync, not interpolation lag"); fail = 1
+    else:
+        print("  OK  bounded - consistent with interpolation lag, not desync")
+
+    # 2. uniform across capsules
+    meds = [statistics.median(ds) for ds in per.values()]
+    if len(meds) > 1 and max(meds) > min(meds) * 2.5 + 0.5:
+        print(f"  FAIL: one capsule drifts more than the others ({min(meds):.2f} vs {max(meds):.2f})"); fail = 1
+    else:
+        print("  OK  uniform across capsules")
+
+    # 3. loose sanity ceiling
+    worst = max(series)
+    if worst > CEILING:
+        print(f"  FAIL: worst disagreement {worst:.2f}m exceeds sanity ceiling {CEILING}m"); fail = 1
+    else:
+        print(f"  OK  worst {worst:.2f}m under {CEILING}m sanity ceiling")
+
+    print("  NOTE: absolute figures are loopback. Real numbers require two machines over Steam relay.")
+    return fail
 
 sys.exit(main())

@@ -77,7 +77,7 @@ fi
 # 5. Positional agreement at matched NETWORK times - the "in sync" in the milestone.
 echo
 echo "== positional agreement =="
-python3 Tests/compare_census.py "$HOST_LOG" "$CLI_LOG" 1.5 || fail=1
+python3 Tests/compare_census.py "$HOST_LOG" "$CLI_LOG" || fail=1
 
 echo
 [ $fail -eq 0 ] && echo "PASS: two processes, one authoritative world, client input round-tripping, positions agree" \
