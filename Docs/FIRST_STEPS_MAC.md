@@ -135,13 +135,27 @@ Only once two capsules move around reliably: **Red Light, Barnaby** (`MINIGAMES.
 
 ## STEP 5 — verify the host service runs on macOS
 
+macOS ships Python 3.9.6, which is new enough — no `brew install python` needed.
+Use a venv rather than `pip3 install openai`: recent macOS pip refuses to install
+into the system Python, and a venv keeps the project self-contained. `.venv/` is
+gitignored.
+
 ```bash
-brew install python
-pip3 install openai
+python3 -m venv .venv
+.venv/bin/pip install openai
 export OPENAI_API_KEY="sk-..."          # add to ~/.zshrc to persist
-python3 Server/hostserver.py
+.venv/bin/python Server/hostserver.py
 curl http://127.0.0.1:8790/health
 ```
+
+**Verified on this Mac (Aug 2026), Python 3.9.6 / openai 2.48.0:**
+- `GET /health` → `{"ok": true, "model": "gpt-4o", "cached": 0}`
+- unknown path → `404`
+- `POST /host/say` with a bad key → `HTTP 502` **and** a `!! HOST FAILED` line on
+  stderr. Lesson 6.2 ("never swallow exceptions") is genuinely in force — the
+  failure is loud, not an empty string.
+
+Only the live model call is unverified, and that needs a real key.
 
 Then confirm a real line comes back:
 
