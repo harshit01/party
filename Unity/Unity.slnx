@@ -12,6 +12,6 @@
   <Project Path="EncryptionTransportEditor.csproj" />
   <Project Path="Telepathy.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
-  <Project Path="Mirror.CompilerSymbols.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Mirror.CompilerSymbols.csproj" />
 </Solution>

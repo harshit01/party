@@ -52,6 +52,19 @@ keyboard**, hosted by an AI presenter who genuinely watched you play and remembe
 | Engine | Unity 6 LTS, 3D URP | Was 6000.5.6f1 on Windows. |
 | Art dimension | **3D URP, primitive art** | CONFIRMED Aug 2026. Capsules and spheres; physics does the acting. No bespoke art until the minigames have survived playtesting. |
 | Net stack | **Mirror + FizzySteamworks** | CONFIRMED Aug 2026. Most trodden path for small-count Steam P2P; on a first netcode project, community answers matter more than first-party polish. Steamworks.NET for lobbies/invites/join codes. |
+| Bots fill empty slots | **Yes — a session runs with 1 real player** | CONFIRMED Aug 2026. 2–8 participants; any slot not taken by a human is a bot. Solo play must work. Consequence: a *participant* is never assumed to be a network connection. |
+
+### Bots — implications to keep in view
+- **Architectural (settled by building it right):** a participant is an abstraction
+  over *either* a `NetworkConnection` *or* a bot controller. Host-authoritative
+  already, so bots simulate on the host. Deciding this before gameplay exists is
+  cheap; retrofitting it would be a second netcode-grade retrofit.
+- **Cost (open):** bot behaviour is per-minigame. Twelve minigames means twelve bot
+  policies. This is real, recurring work and should weigh on which four get cut.
+- **Product (open, founder's call):** the differentiator is a host who runs gags
+  about *your friends*. A lobby of five bots gives him less to work with. Worth
+  deciding whether the host treats bots as characters in their own right or mostly
+  ignores them.
 
 ### Open, deliberately undecided
 - **Game name.** Not chosen. Do the trademark/collision check BEFORE any art is

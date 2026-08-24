@@ -1,0 +1,129 @@
+using Mirror;
+using UnityEngine;
+
+namespace Party
+{
+    /// <summary>
+    /// One participant's capsule. Human or bot - the rest of the game cannot tell.
+    ///
+    /// HOST-AUTHORITATIVE (HANDOFF.md section 1). Clients send input, never position:
+    /// the host is the only thing that moves a Rigidbody, and NetworkTransform pushes
+    /// the result out. That costs a round trip of input latency and buys a host that
+    /// cannot be lied to - which matters for a game about shoving people off things.
+    /// </summary>
+    [RequireComponent(typeof(Rigidbody))]
+    public class PartyPlayer : NetworkBehaviour
+    {
+        [Header("Movement")]
+        [SerializeField] float moveForce = 45f;
+        [SerializeField] float maxSpeed  = 7f;
+
+        [SyncVar(hook = nameof(OnNameChanged))]   public string displayName = "?";
+        [SyncVar(hook = nameof(OnColourChanged))] public Color  colour      = Color.white;
+
+        /// <summary>True for a slot filled by a bot. Synced so clients can label it.</summary>
+        [SyncVar(hook = nameof(OnNameChanged))]   public bool   isBot;
+
+        [Header("Scene refs")]
+        [SerializeField] Renderer  bodyRenderer;
+        [SerializeField] TextMesh  nameTag;
+
+        Rigidbody   _rb;
+        IMoveInput  _input;      // host-side only
+        Vector2     _pendingMove; // last input received for this player, host-side
+
+        void Awake()
+        {
+            _rb = GetComponent<Rigidbody>();
+            _rb.constraints = RigidbodyConstraints.FreezeRotation;
+        }
+
+        public override void OnStartServer()
+        {
+            // A bot drives itself on the host. A human's input arrives by command.
+            if (isBot) _input = new BotMoveInput(transform);
+        }
+
+        public override void OnStartClient()
+        {
+            ApplyName();
+            ApplyColour();
+        }
+
+        /// <summary>
+        /// TEST ONLY. With -partyautopilot, a local human's capsule is driven by the bot
+        /// policy instead of the keyboard, so a headless build can exercise the real
+        /// input -> CmdMove -> host -> NetworkTransform path. Without it, a headless
+        /// client reads no devices and its capsule sits still, which would let a broken
+        /// input path pass a sync test unnoticed.
+        /// </summary>
+        static bool? _autopilot;
+        static bool Autopilot
+        {
+            get
+            {
+                _autopilot ??= System.Array.IndexOf(
+                    System.Environment.GetCommandLineArgs(), "-partyautopilot") >= 0;
+                return _autopilot.Value;
+            }
+        }
+
+        void Update()
+        {
+            // Only the human who owns this capsule samples devices, and only to send
+            // intent. isLocalPlayer is false on every bot, so bots never read a keyboard.
+            if (!isLocalPlayer) return;
+
+            _input ??= Autopilot ? new BotMoveInput(transform) : (IMoveInput)new LocalMoveInput();
+            CmdMove(_input.Move);
+        }
+
+        [Command(channel = Channels.Unreliable)]
+        void CmdMove(Vector2 move)
+        {
+            // Never trust a client's magnitude.
+            _pendingMove = Vector2.ClampMagnitude(move, 1f);
+        }
+
+        void FixedUpdate()
+        {
+            if (!isServer) return;   // host-authoritative: only the host integrates physics
+
+            // Bots produce their input here; humans' arrived via CmdMove.
+            if (isBot && _input != null) _pendingMove = _input.Move;
+
+            Vector3 dir = new Vector3(_pendingMove.x, 0f, _pendingMove.y);
+            if (dir.sqrMagnitude > 0.0001f) _rb.AddForce(dir * moveForce, ForceMode.Acceleration);
+
+            Vector3 flat = new Vector3(_rb.linearVelocity.x, 0f, _rb.linearVelocity.z);
+            if (flat.magnitude > maxSpeed)
+            {
+                flat = flat.normalized * maxSpeed;
+                _rb.linearVelocity = new Vector3(flat.x, _rb.linearVelocity.y, flat.z);
+            }
+        }
+
+        void LateUpdate()
+        {
+            // Billboard the label at whatever camera is rendering.
+            if (nameTag == null) return;
+            Camera c = Camera.main;
+            if (c != null) nameTag.transform.rotation = c.transform.rotation;
+        }
+
+        void OnNameChanged(string _, string __) => ApplyName();
+        void OnNameChanged(bool _, bool __)     => ApplyName();
+        void OnColourChanged(Color _, Color __) => ApplyColour();
+
+        void ApplyName()
+        {
+            if (nameTag != null) nameTag.text = isBot ? displayName + " (bot)" : displayName;
+        }
+
+        void ApplyColour()
+        {
+            if (bodyRenderer != null) bodyRenderer.material.color = colour;
+            if (nameTag != null)      nameTag.color = colour;
+        }
+    }
+}
