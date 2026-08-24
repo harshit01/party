@@ -28,15 +28,22 @@ namespace Party.RedLight
     public class RedLightDirector : NetworkBehaviour
     {
         [Header("Course")]
+        // COURSE LENGTH IS A TIMING DECISION, NOT A LAYOUT ONE.
+        // The original course was 26 units - about 3.7s at the 7 m/s cap - while a single
+        // GO window lasts up to 4.5s. Players therefore reached the line during the FIRST
+        // GO and the game ended in under 8 seconds having never once called STOP. The
+        // course must be many GO windows long or there is no game.
         [Tooltip("Players win by crossing this Z.")]
-        public float finishZ = 14f;
+        public float finishZ = 46f;
         [Tooltip("Players are returned here at the start of a round.")]
-        public float startZ = -12f;
+        public float startZ = -46f;
 
         [Header("Timing")]
         public float countdownSeconds = 3f;
-        public Vector2 goDuration   = new Vector2(1.6f, 4.5f);
-        public Vector2 stopDuration = new Vector2(1.6f, 2.8f);
+        // Short, unpredictable GO windows. Long ones let everyone sprint the whole
+        // course; the tension is in being caught mid-stride.
+        public Vector2 goDuration   = new Vector2(1.1f, 2.6f);
+        public Vector2 stopDuration = new Vector2(1.5f, 2.6f);
 
         [Header("Judging")]
         [Tooltip("Movement beyond this during STOP counts as moving.")]
@@ -86,6 +93,7 @@ namespace Party.RedLight
                 p.eliminated = false;
                 p.finished   = false;
                 p.ServerTeleport(new Vector3(Random.Range(-6f, 6f), 1.1f, startZ));
+                p.GetComponent<Juice.PlayerJuice>()?.ResetJuice();
             }
 
             verdictText = "";

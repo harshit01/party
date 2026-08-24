@@ -33,14 +33,24 @@ namespace Party.Juice
             RedLightDirector d = RedLightDirector.Instance;
 
             // Frame the furthest player still in it - that is where the tension is.
-            float lead = -12f;
+            //
+            // The fallback used to be a hardcoded -12, the OLD start line. When the course
+            // was lengthened to start at -46 and everyone got eliminated, nothing updated
+            // 'lead', so the camera parked 34 units up an empty lane and the players were
+            // off screen entirely. Never hardcode a position that another file owns.
+            float startZ = d != null ? d.startZ : -46f;
+            float lead = float.MinValue, anyone = float.MinValue;
             Transform winner = null;
             foreach (PartyPlayer p in RedLightDirector.Players())
             {
+                anyone = Mathf.Max(anyone, p.transform.position.z);
                 if (p.finished) winner = p.transform;
                 if (p.eliminated) continue;
                 lead = Mathf.Max(lead, p.transform.position.z);
             }
+
+            // Everyone out? Show the wreckage rather than an empty stretch of lane.
+            if (lead == float.MinValue) lead = anyone != float.MinValue ? anyone : startZ;
 
             float zoom = 1f;
             if (d != null && d.phase == RoundPhase.Finished && winner != null)

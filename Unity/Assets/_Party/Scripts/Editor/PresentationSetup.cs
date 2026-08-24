@@ -75,29 +75,45 @@ namespace Party.EditorTools
         public static VolumeProfile PostFX()
         {
             System.IO.Directory.CreateDirectory(MatDir);
-            VolumeProfile p = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
-            if (p == null)
+            // RECREATE, never mutate.
+            //
+            // The previous version removed each VolumeComponent and DestroyImmediate'd the
+            // sub-asset on every run. The profile kept the now-null entries, so the asset
+            // ended up listing 8 components that were all {fileID: 0}. The editor tolerated
+            // it; the BUILD did not - deserialising those nulls read past the end of the
+            // scene data and the player died on startup with "level0 is corrupted", having
+            // reported a successful build. Deleting and rebuilding the asset avoids the
+            // whole class of problem.
+            // VolumeProfile.Add<T>() creates the component IN MEMORY ONLY. Persisting it
+            // requires AssetDatabase.AddObjectToAsset - without that every component is
+            // written as {fileID: 0}, the profile lists 8 null entries, and the BUILD dies
+            // deserialising them ("level0 is corrupted") while the editor shrugs it off.
+            AssetDatabase.DeleteAsset(ProfilePath);
+            VolumeProfile p = ScriptableObject.CreateInstance<VolumeProfile>();
+            AssetDatabase.CreateAsset(p, ProfilePath);
+
+            T Persist<T>() where T : VolumeComponent
             {
-                p = ScriptableObject.CreateInstance<VolumeProfile>();
-                AssetDatabase.CreateAsset(p, ProfilePath);
+                T c = p.Add<T>(true);
+                c.hideFlags = HideFlags.HideInHierarchy;
+                AssetDatabase.AddObjectToAsset(c, p);
+                return c;
             }
 
-            foreach (var c in p.components.ToArray()) { p.Remove(c.GetType()); Object.DestroyImmediate(c, true); }
-
-            Tonemapping tm = p.Add<Tonemapping>(true);
+            Tonemapping tm = Persist<Tonemapping>();
             tm.mode.overrideState = true; tm.mode.value = TonemappingMode.ACES;
 
-            Bloom bl = p.Add<Bloom>(true);
+            Bloom bl = Persist<Bloom>();
             bl.intensity.overrideState = true; bl.intensity.value = 0.9f;
             bl.threshold.overrideState = true; bl.threshold.value = 1.05f;
             bl.scatter.overrideState = true;   bl.scatter.value = 0.62f;
 
-            ColorAdjustments ca = p.Add<ColorAdjustments>(true);
+            ColorAdjustments ca = Persist<ColorAdjustments>();
             ca.postExposure.overrideState = true; ca.postExposure.value = 0.25f;
             ca.contrast.overrideState = true;     ca.contrast.value = 18f;
             ca.saturation.overrideState = true;   ca.saturation.value = 22f;
 
-            Vignette vg = p.Add<Vignette>(true);
+            Vignette vg = Persist<Vignette>();
             vg.intensity.overrideState = true; vg.intensity.value = 0.32f;
             vg.smoothness.overrideState = true; vg.smoothness.value = 0.45f;
 

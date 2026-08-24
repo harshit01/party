@@ -81,11 +81,11 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  finishZ: 14
-  startZ: -12
+  finishZ: 46
+  startZ: -46
   countdownSeconds: 3
-  goDuration: {x: 1.6, y: 4.5}
-  stopDuration: {x: 1.6, y: 2.8}
+  goDuration: {x: 1.1, y: 2.6}
+  stopDuration: {x: 1.5, y: 2.6}
   moveThreshold: 0.75
   baseGrace: 0.65
   phase: 0
