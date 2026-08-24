@@ -29,18 +29,18 @@ namespace Party.EditorTools
         /// rather than a stack of grey boxes.</summary>
         static readonly Color[] BubbleCols =
         {
-            new Color(0.30f, 0.72f, 0.95f),   // sky
-            new Color(0.55f, 0.45f, 0.92f),   // violet
-            new Color(0.20f, 0.80f, 0.66f),   // teal
-            new Color(0.98f, 0.62f, 0.25f),   // tangerine
-            new Color(0.92f, 0.40f, 0.62f),   // rose
+            new Color(0.13f, 0.62f, 0.94f),   // deep sky
+            new Color(0.45f, 0.32f, 0.90f),   // indigo
+            new Color(0.06f, 0.72f, 0.58f),   // jade
+            new Color(0.97f, 0.52f, 0.10f),   // tangerine
+            new Color(0.90f, 0.24f, 0.52f),   // magenta
         };
         static int _bubbleIndex;
 
         static readonly Color Ink    = new Color(0.96f, 0.96f, 0.98f);
         static readonly Color Dim    = new Color(1f, 1f, 1f, 0.55f);
         static readonly Color Accent = new Color(0.98f, 0.78f, 0.25f);
-        static readonly Color Play   = new Color(0.93f, 0.20f, 0.42f);
+        static readonly Color Play   = new Color(0.95f, 0.12f, 0.38f);
         static readonly Color Slate  = new Color(1f, 1f, 1f, 0.10f);
 
         [MenuItem("Party/Rebuild menu scene")]
@@ -98,8 +98,8 @@ namespace Party.EditorTools
             cam.fieldOfView = 30f;
             // Pulled back and offset so the whole Filament reads, sitting left of the
             // button column rather than being cropped by it.
-            camGo.transform.position = new Vector3(-1.65f, 0.55f, -9.2f);
-            camGo.transform.rotation = Quaternion.Euler(3.5f, 9.5f, 0f);
+            camGo.transform.position = new Vector3(-2.15f, 0.75f, -8.6f);
+            camGo.transform.rotation = Quaternion.Euler(4.5f, 11f, 0f);
             camGo.AddComponent<AudioListener>();
             var cd = camGo.GetComponent<UniversalAdditionalCameraData>();
             if (cd == null) cd = camGo.AddComponent<UniversalAdditionalCameraData>();
@@ -153,8 +153,20 @@ namespace Party.EditorTools
             si.sprite = _bubble;
             si.type = Image.Type.Sliced;
             si.pixelsPerUnitMultiplier = 0.9f;
-            si.color = new Color(0.18f, 0.42f, 0.70f, 0.42f);   // soft blue glass
+            si.color = new Color(0.08f, 0.24f, 0.50f, 0.55f);   // deeper glass so bubbles pop
             si.raycastTarget = false;
+            GameObject edge = UI("ScrimEdge", canvasGo.transform);
+            RectTransform ert = edge.GetComponent<RectTransform>();
+            ert.anchorMin = new Vector2(1f, 0f); ert.anchorMax = new Vector2(1f, 1f);
+            ert.pivot = new Vector2(1f, 0.5f);
+            ert.anchoredPosition = new Vector2(-40f, 0f);
+            ert.sizeDelta = new Vector2(572f, -128f);
+            Image ei = edge.AddComponent<Image>();
+            ei.sprite = _bubble; ei.type = Image.Type.Sliced;
+            ei.pixelsPerUnitMultiplier = 0.9f;
+            ei.color = new Color(1f, 1f, 1f, 0.20f);
+            ei.raycastTarget = false;
+            edge.transform.SetSiblingIndex(scrim.transform.GetSiblingIndex());
 
             // Stacked outlines fake a thick keyline. uGUI's Outline draws four offset
             // copies, so several at increasing distance build the chunky border the
@@ -210,61 +222,160 @@ namespace Party.EditorTools
             GameObject stage = new GameObject("Stage");
             MenuStage ms = stage.AddComponent<MenuStage>();
 
-            // BRIGHT SKY, not a dark room.
-            //
-            // Four references all point the same way: sunny, saturated, cheerful, with
-            // soft things drifting past. The earlier dark-plum version was the opposite
-            // of that, and a party game menu that looks like a night club reads as the
-            // wrong genre before a single word is read.
+            // RICHER SKY. The first pass was so pale it read as washed out - a flat
+            // near-white blue with nothing in it. Deeper top, warm horizon, so there is
+            // actual range in the frame.
             Texture2D sky = GradientTextures.Vertical(
                 "SkyGradient",
-                new Color(0.42f, 0.73f, 0.97f),   // sky blue at the top
-                new Color(0.86f, 0.95f, 1.00f),   // pale near the horizon
+                new Color(0.16f, 0.52f, 0.92f),   // deep blue overhead
+                new Color(0.99f, 0.82f, 0.62f),   // warm light at the horizon
                 256);
             GameObject back = GameObject.CreatePrimitive(PrimitiveType.Quad);
             Object.DestroyImmediate(back.GetComponent<Collider>());
             back.name = "Sky";
             back.transform.SetParent(stage.transform, false);
-            back.transform.position = new Vector3(0f, 0.6f, 14f);
-            back.transform.localScale = new Vector3(110f, 62f, 1f);
+            back.transform.position = new Vector3(0f, 1f, 26f);
+            back.transform.localScale = new Vector3(140f, 80f, 1f);
             back.GetComponent<Renderer>().sharedMaterial =
                 GradientTextures.UnlitTex("SkyMat", sky, Color.white);
 
-            // Soft clouds drifting across, plus a few coloured balloons for the party.
+            BuildGameProps(stage.transform);
+
             Texture2D puff = GradientTextures.Bokeh("CloudPuff", 256);
             ms.bokehMaterials = new[]
             {
-                GradientTextures.UnlitTex("Cloud0", puff, new Color(1f, 1f, 1f, 0.85f)),
-                GradientTextures.UnlitTex("Cloud1", puff, new Color(1f, 1f, 1f, 0.65f)),
-                GradientTextures.UnlitTex("Balloon0", puff, new Color(1f, 0.55f, 0.62f, 0.75f)),
-                GradientTextures.UnlitTex("Balloon1", puff, new Color(1f, 0.86f, 0.42f, 0.75f)),
-                GradientTextures.UnlitTex("Balloon2", puff, new Color(0.62f, 0.88f, 0.70f, 0.75f)),
+                GradientTextures.UnlitTex("Cloud0", puff, new Color(1f, 1f, 1f, 0.80f)),
+                GradientTextures.UnlitTex("Cloud1", puff, new Color(1f, 0.96f, 0.90f, 0.60f)),
+                GradientTextures.UnlitTex("Balloon0", puff, new Color(1f, 0.42f, 0.55f, 0.55f)),
+                GradientTextures.UnlitTex("Balloon1", puff, new Color(1f, 0.82f, 0.30f, 0.55f)),
             };
-            ms.confettiCount = 26;
-            ms.area = new Vector3(26f, 14f, 9f);
-            ms.driftSideways = true;    // clouds cross the frame rather than falling
+            ms.confettiCount = 20;
+            ms.area = new Vector3(30f, 16f, 12f);
+            ms.driftSideways = true;
 
-            // Sunny lighting: a bright warm key from high, a soft sky-blue fill.
             var lights = new List<Light>();
             GameObject sun = new GameObject("Sun");
             sun.transform.SetParent(stage.transform, false);
-            sun.transform.rotation = Quaternion.Euler(42f, 28f, 0f);
+            sun.transform.rotation = Quaternion.Euler(38f, 24f, 0f);
             Light sl = sun.AddComponent<Light>();
-            sl.type = LightType.Directional;
-            sl.intensity = 1.9f;
-            sl.color = new Color(1f, 0.96f, 0.88f);
-            sl.shadows = LightShadows.Soft;
+            sl.type = LightType.Directional; sl.intensity = 2.1f;
+            sl.color = new Color(1f, 0.95f, 0.86f); sl.shadows = LightShadows.Soft;
             lights.Add(sl);
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor     = new Color(0.72f, 0.84f, 1.00f);
-            RenderSettings.ambientEquatorColor = new Color(0.80f, 0.86f, 0.94f);
-            RenderSettings.ambientGroundColor  = new Color(0.62f, 0.66f, 0.72f);
+            RenderSettings.ambientSkyColor     = new Color(0.55f, 0.74f, 1.00f);
+            RenderSettings.ambientEquatorColor = new Color(0.86f, 0.82f, 0.80f);
+            RenderSettings.ambientGroundColor  = new Color(0.50f, 0.45f, 0.48f);
             RenderSettings.fog = false;
 
             ms.pulseLights = lights.ToArray();
-            ms.pulseAmount = 0.05f;
-            ms.pulseSpeed = 0.6f;
+            ms.pulseAmount = 0.04f; ms.pulseSpeed = 0.5f;
+        }
+
+        /// <summary>
+        /// THE GAME'S OWN FURNITURE, behind the contestant.
+        ///
+        /// An empty sky says nothing about what this game is. These are the actual props
+        /// from Red Light - the gold finish gantry, red piston blocks, slalom pillars,
+        /// a stretch of lane - plus bunting and a few other Filaments waiting their turn.
+        /// Depth of field softens them, so they read as a place rather than clutter.
+        /// </summary>
+        static void BuildGameProps(Transform parent)
+        {
+            GameObject props = new GameObject("GameProps");
+            props.transform.SetParent(parent, false);
+
+            Material gold    = PresentationSetup.Lit("MenuGold", new Color(0.99f, 0.80f, 0.24f), 0.75f, 0.55f, new Color(0.45f, 0.32f, 0.04f));
+            Material hazard  = PresentationSetup.Lit("MenuHazard", new Color(0.92f, 0.30f, 0.32f), 0.4f);
+            Material pillar  = PresentationSetup.Lit("MenuPillar", new Color(0.86f, 0.88f, 0.94f), 0.35f);
+            Material laneMat = PresentationSetup.Lit("MenuLane", new Color(0.42f, 0.46f, 0.58f), 0.2f);
+
+            // A floating stretch of lane the podium sits on.
+            GameObject lane = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(lane.GetComponent<Collider>());
+            lane.name = "LaneSlab";
+            lane.transform.SetParent(props.transform, false);
+            lane.transform.position = new Vector3(0f, -2.1f, 3.5f);
+            lane.transform.localScale = new Vector3(9f, 0.7f, 22f);
+            lane.GetComponent<Renderer>().sharedMaterial = laneMat;
+
+            // Finish gantry down the lane.
+            for (int sgn = -1; sgn <= 1; sgn += 2)
+            {
+                GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Object.DestroyImmediate(post.GetComponent<Collider>());
+                post.transform.SetParent(props.transform, false);
+                post.transform.position = new Vector3(sgn * 3.6f, 0.2f, 13f);
+                post.transform.localScale = new Vector3(0.45f, 4.6f, 0.45f);
+                post.GetComponent<Renderer>().sharedMaterial = gold;
+            }
+            GameObject beam = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(beam.GetComponent<Collider>());
+            beam.transform.SetParent(props.transform, false);
+            beam.transform.position = new Vector3(0f, 2.4f, 13f);
+            beam.transform.localScale = new Vector3(7.8f, 0.55f, 0.45f);
+            beam.GetComponent<Renderer>().sharedMaterial = gold;
+
+            // Hazards along the lane.
+            float[] zs = { 6.5f, 9.5f };
+            for (int i = 0; i < zs.Length; i++)
+                for (int sgn = -1; sgn <= 1; sgn += 2)
+                {
+                    GameObject blk = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    Object.DestroyImmediate(blk.GetComponent<Collider>());
+                    blk.transform.SetParent(props.transform, false);
+                    blk.transform.position = new Vector3(sgn * 2.6f, -1.2f, zs[i]);
+                    blk.transform.localScale = new Vector3(1.9f, 1.2f, 1.1f);
+                    blk.GetComponent<Renderer>().sharedMaterial = hazard;
+                }
+            for (int k = -1; k <= 1; k += 2)
+            {
+                GameObject pil = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Object.DestroyImmediate(pil.GetComponent<Collider>());
+                pil.transform.SetParent(props.transform, false);
+                pil.transform.position = new Vector3(k * 1.6f, -0.9f, 8f);
+                pil.transform.localScale = new Vector3(1.1f, 0.9f, 1.1f);
+                pil.GetComponent<Renderer>().sharedMaterial = pillar;
+            }
+
+            // Bunting strung across the frame - instantly reads "party".
+            Color[] flagCols =
+            {
+                new Color(0.98f,0.35f,0.45f), new Color(0.35f,0.72f,0.98f),
+                new Color(0.35f,0.86f,0.55f), new Color(1f,0.82f,0.28f),
+                new Color(0.72f,0.48f,0.95f),
+            };
+            for (int i = 0; i < 16; i++)
+            {
+                GameObject flag = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                Object.DestroyImmediate(flag.GetComponent<Collider>());
+                flag.name = "Flag" + i;
+                flag.transform.SetParent(props.transform, false);
+                float t = i / 15f;
+                float x = Mathf.Lerp(-13f, 13f, t);
+                float y = 5.6f - Mathf.Sin(t * Mathf.PI) * 1.5f;      // gentle sag
+                flag.transform.position = new Vector3(x, y, 11f);
+                flag.transform.localScale = new Vector3(0.85f, 1.15f, 1f);
+                flag.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
+                flag.GetComponent<Renderer>().sharedMaterial =
+                    PresentationSetup.Lit("Flag" + i, flagCols[i % flagCols.Length], 0.25f);
+            }
+
+            // Other contestants waiting - the same Filament, so the menu shows the cast.
+            int[] chassis = { 1, 3, 4, 6 };
+            for (int i = 0; i < 4; i++)
+            {
+                GameObject other = new GameObject("Contestant" + i);
+                other.transform.SetParent(props.transform, false);
+                other.transform.position = new Vector3(-6.5f + i * 4.3f, -1.15f, 8.5f + (i % 2) * 1.6f);
+                other.transform.localScale = Vector3.one * 0.85f;
+                other.transform.localRotation = Quaternion.Euler(0f, -18f + i * 12f, 0f);
+                CharacterLook.Build(other.transform, new LookConfig
+                {
+                    chassis = chassis[i], livery = i % 5, filament = i % 6,
+                    shape = i % 5, dome = 0, mask = 0, accessory = (i * 2) % 5,
+                }, out _, out _);
+            }
         }
 
         // ---------- panels ----------
