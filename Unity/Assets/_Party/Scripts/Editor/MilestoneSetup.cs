@@ -112,13 +112,25 @@ namespace Party.EditorTools
 
             // Networking
             GameObject netGo = new GameObject("NetworkManager");
+
+            // Both transports live on the object; PartyNetworkManager.Awake picks one.
+            // Steam when it is genuinely up, direct-IP otherwise - so every local and LAN
+            // test still runs on a machine with no Steam.
             KcpTransport kcp = netGo.AddComponent<KcpTransport>();
+            Mirror.FizzySteam.FizzySteamworks fizzy = netGo.AddComponent<Mirror.FizzySteam.FizzySteamworks>();
+
+            netGo.AddComponent<SteamBoot>();
+
             PartyNetworkManager nm = netGo.AddComponent<PartyNetworkManager>();
-            nm.transport = kcp;
-            nm.playerPrefab = playerPrefab;
-            nm.targetParticipants = 2;
-            nm.headlessStartMode = HeadlessStartOptions.DoNothing;  // driven by MilestoneAutoRun instead
-            netGo.AddComponent<NetworkManagerHUD>();
+            nm.transport          = kcp;      // default; overridden in Awake
+            nm.localTransport     = kcp;
+            nm.steamTransport     = fizzy;
+            nm.playerPrefab       = playerPrefab;
+            nm.targetParticipants = 4;
+            nm.headlessStartMode  = HeadlessStartOptions.DoNothing;  // driven by MilestoneAutoRun instead
+
+            netGo.AddComponent<SteamLobby>();
+            netGo.AddComponent<PartyHUD>();
             netGo.AddComponent<MilestoneAutoRun>();
 
             // Spawn points spread around the middle

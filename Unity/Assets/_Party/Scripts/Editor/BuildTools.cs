@@ -25,6 +25,31 @@ namespace Party.EditorTools
         [MenuItem("Party/Build/Windows x64")]
         public static void BuildWindows() => Run(BuildTarget.StandaloneWindows64, "Build/Windows/Party.exe");
 
+        static void CopyAppId(string outPath, BuildTarget target)
+        {
+            const string src = "steam_appid.txt";
+            if (!System.IO.File.Exists(src))
+            {
+                Debug.LogError("[Build] steam_appid.txt missing from the project root.");
+                return;
+            }
+
+            // On macOS the player lives inside the .app bundle.
+            string dir = target == BuildTarget.StandaloneOSX
+                ? System.IO.Path.Combine(outPath, "Contents", "MacOS")
+                : System.IO.Path.GetDirectoryName(outPath);
+
+            if (string.IsNullOrEmpty(dir) || !System.IO.Directory.Exists(dir))
+            {
+                Debug.LogError($"[Build] cannot place steam_appid.txt - no directory at {dir}");
+                return;
+            }
+
+            string dest = System.IO.Path.Combine(dir, "steam_appid.txt");
+            System.IO.File.Copy(src, dest, true);
+            Debug.Log($"[Build] steam_appid.txt -> {dest}");
+        }
+
         static void Run(BuildTarget target, string outPath)
         {
             var opts = new BuildPlayerOptions
@@ -37,6 +62,11 @@ namespace Party.EditorTools
 
             BuildReport report = BuildPipeline.BuildPlayer(opts);
             BuildSummary s = report.summary;
+
+            // Steam looks for steam_appid.txt NEXT TO THE EXECUTABLE. Without it
+            // SteamAPI.Init() returns false and every lobby silently does nothing -
+            // so copy it as part of the build rather than leaving it to be forgotten.
+            if (s.result == BuildResult.Succeeded) CopyAppId(outPath, target);
 
             Debug.Log($"[Build] {target} -> {s.result} ({s.totalSize / 1048576} MB, {s.totalTime.TotalSeconds:F0}s)");
 

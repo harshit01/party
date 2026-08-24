@@ -34,8 +34,52 @@ namespace Party
             "Gusset", "Hobb", "Larkspur", "Mullion",
         };
 
+        [Header("Transport selection")]
+        [Tooltip("Direct-IP transport. Used for local and LAN testing.")]
+        public Transport localTransport;
+        [Tooltip("Steam P2P transport. Used when Steam is available and not overridden.")]
+        public Transport steamTransport;
+
         readonly List<PartyPlayer> _bots = new List<PartyPlayer>();
         int _nextSlot;
+
+        /// <summary>
+        /// Choose the transport before Mirror binds it in base.Awake().
+        ///
+        /// Steam when it is genuinely up, direct-IP otherwise. This keeps every local and
+        /// LAN test working on a machine with no Steam at all - which matters, because
+        /// Steam P2P needs two Steam-capable machines and cannot be exercised solo.
+        /// Force either with -transport steam | -transport local.
+        /// </summary>
+        public override void Awake()
+        {
+            string forced = null;
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+                if (args[i] == "-transport") forced = args[i + 1].ToLowerInvariant();
+
+            bool useSteam = forced == "steam" || (forced == null && SteamBoot.Ready);
+
+            if (useSteam && steamTransport != null)
+            {
+                transport = steamTransport;
+                if (!SteamBoot.Ready)
+                    Debug.LogError("[Party] -transport steam requested but Steam is not ready: "
+                                   + SteamBoot.FailureReason);
+            }
+            else
+            {
+                transport = localTransport != null ? localTransport : transport;
+            }
+
+            if (steamTransport != null) steamTransport.enabled = transport == steamTransport;
+            if (localTransport != null) localTransport.enabled = transport == localTransport;
+
+            Debug.Log($"[Party] transport = {(transport != null ? transport.GetType().Name : "NONE")}"
+                      + $" (steamReady={SteamBoot.Ready})");
+
+            base.Awake();
+        }
 
         public override void OnStartServer()
         {
