@@ -1,0 +1,370 @@
+using Party.Character;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+
+namespace Party.EditorTools
+{
+    /// <summary>
+    /// Builds the PARTY GAME front end: podium, live Filament, and five panels.
+    ///
+    ///     Unity -batchmode -quit -executeMethod Party.EditorTools.MenuSetup.Build
+    ///
+    /// Built from code so the whole screen is reproducible and reviewable in a diff,
+    /// rather than assembled by dragging in the inspector.
+    /// </summary>
+    public static class MenuSetup
+    {
+        const string ScenePath = "Assets/_Party/Scenes/Menu.unity";
+        static Font _font;
+        static MainMenu _menu;
+
+        static readonly Color Ink    = new Color(0.96f, 0.96f, 0.98f);
+        static readonly Color Dim    = new Color(1f, 1f, 1f, 0.55f);
+        static readonly Color Accent = new Color(0.98f, 0.78f, 0.25f);
+        static readonly Color Play   = new Color(0.93f, 0.20f, 0.42f);
+        static readonly Color Slate  = new Color(1f, 1f, 1f, 0.10f);
+
+        [MenuItem("Party/Rebuild menu scene")]
+        public static void Build()
+        {
+            _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                 ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // ---------- set ----------
+            GameObject key = new GameObject("Key Light");
+            key.AddComponent<Light>().type = LightType.Directional;
+            PresentationSetup.Lighting(key);
+            key.transform.rotation = Quaternion.Euler(28f, 150f, 0f);
+            PresentationSetup.GlobalVolume();
+
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            floor.name = "Floor";
+            floor.transform.localScale = Vector3.one * 5f;
+            floor.transform.position = new Vector3(0f, -1.7f, 0f);
+            floor.GetComponent<Renderer>().sharedMaterial =
+                PresentationSetup.Lit("MenuFloor", new Color(0.15f, 0.16f, 0.22f), 0.25f);
+
+            GameObject podium = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            podium.name = "Podium";
+            podium.transform.position = new Vector3(0f, -1.45f, 0f);
+            podium.transform.localScale = new Vector3(1.45f, 0.22f, 1.45f);
+            podium.GetComponent<Renderer>().sharedMaterial =
+                PresentationSetup.Lit("Podium", Play, 0.5f, 0f, new Color(0.32f, 0.05f, 0.14f));
+
+            GameObject charGo = new GameObject("Character");
+            charGo.transform.position = new Vector3(0f, -0.5f, 0f);
+            charGo.transform.localScale = Vector3.one * 1.5f;
+            CharacterDisplay display = charGo.AddComponent<CharacterDisplay>();
+
+            GameObject camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera";
+            Camera cam = camGo.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.Skybox;
+            cam.fieldOfView = 32f;
+            camGo.transform.position = new Vector3(0.55f, 0.15f, -5.4f);
+            camGo.transform.rotation = Quaternion.Euler(2.5f, -6f, 0f);
+            camGo.AddComponent<AudioListener>();
+            var cd = camGo.GetComponent<UniversalAdditionalCameraData>();
+            if (cd == null) cd = camGo.AddComponent<UniversalAdditionalCameraData>();
+            cd.renderPostProcessing = true;
+            cd.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+
+            GameObject sys = new GameObject("Systems");
+            sys.AddComponent<SteamBoot>();   // so the menu can report Steam's real state
+
+            // ---------- canvas ----------
+            GameObject canvasGo = new GameObject("Canvas", typeof(RectTransform));
+            Canvas canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            CanvasScaler cs = canvasGo.AddComponent<CanvasScaler>();
+            cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            cs.referenceResolution = new Vector2(1920f, 1080f);
+            cs.matchWidthOrHeight = 0.5f;
+            canvasGo.AddComponent<GraphicRaycaster>();
+
+            GameObject es = new GameObject("EventSystem");
+            es.AddComponent<EventSystem>();
+            es.AddComponent<StandaloneInputModule>();
+
+            _menu = canvasGo.AddComponent<MainMenu>();
+            _menu.display = display;
+
+            Label(canvasGo.transform, "Title", "PARTY GAME", 88, TL, new Vector2(64f, -52f),
+                  new Vector2(900f, 110f), TextAnchor.UpperLeft, Accent);
+            Label(canvasGo.transform, "Sub", "working title", 24, TL, new Vector2(70f, -150f),
+                  new Vector2(700f, 36f), TextAnchor.UpperLeft, Dim);
+
+            _menu.homePanel        = BuildHome(canvasGo.transform);
+            _menu.characterPanel   = BuildCharacter(canvasGo.transform);
+            _menu.settingsPanel    = BuildSettings(canvasGo.transform);
+            _menu.controlsPanel    = BuildControls(canvasGo.transform);
+            _menu.multiplayerPanel = BuildMultiplayer(canvasGo.transform);
+
+            System.IO.Directory.CreateDirectory("Assets/_Party/Scenes");
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(ScenePath, true),
+                new EditorBuildSettingsScene("Assets/_Party/Scenes/RedLight.unity", true),
+                new EditorBuildSettingsScene("Assets/_Party/Scenes/NetTest.unity", true),
+            };
+            Debug.Log("[Party] menu scene built.");
+        }
+
+        // ---------- panels ----------
+
+        static GameObject BuildHome(Transform parent)
+        {
+            GameObject p = Panel(parent, "HomePanel");
+            float y = -250f;
+            BigButton(p.transform, "PLAY", y, Play, 46, nameof(MainMenu.PlayLocal)); y -= 116f;
+            NavButton(p.transform, "CHARACTER",   y, (int)MainMenu.Panel.Character);   y -= 84f;
+            NavButton(p.transform, "MULTIPLAYER", y, (int)MainMenu.Panel.Multiplayer); y -= 84f;
+            NavButton(p.transform, "SETTINGS",    y, (int)MainMenu.Panel.Settings);    y -= 84f;
+            NavButton(p.transform, "CONTROLS",    y, (int)MainMenu.Panel.Controls);    y -= 84f;
+            VoidButton(p.transform, "QUIT", TR, new Vector2(-64f, y), new Vector2(430f, 62f),
+                       new Color(0.28f, 0.28f, 0.33f), 24, nameof(MainMenu.Quit));
+            return p;
+        }
+
+        static GameObject BuildCharacter(Transform parent)
+        {
+            GameObject p = Panel(parent, "CharacterPanel");
+            Label(p.transform, "H", "YOUR FILAMENT", 34, TR, new Vector2(-64f, -240f),
+                  new Vector2(560f, 44f), TextAnchor.UpperRight, Accent);
+            Label(p.transform, "Blurb", "the glow shows how the host feels about you",
+                  19, TR, new Vector2(-64f, -284f), new Vector2(560f, 30f), TextAnchor.UpperRight, Dim);
+
+            _menu.nameField = Field(p.transform, "Name", "your name", TR, new Vector2(-64f, -324f), new Vector2(560f, 56f));
+
+            float y = -396f;
+            _menu.lookValues = new Text[MainMenu.RowCount];
+            for (int i = 0; i < MainMenu.RowCount; i++)
+            {
+                _menu.lookValues[i] = LookRow(p.transform, MainMenu.RowCaption(i), i, y);
+                y -= 62f;
+            }
+            VoidButton(p.transform, "RANDOMISE", TR, new Vector2(-64f, y - 6f), new Vector2(270f, 54f),
+                       new Color(0.35f, 0.30f, 0.55f), 22, nameof(MainMenu.Randomise));
+            Back(p.transform, y - 6f, -300f);
+            return p;
+        }
+
+        static GameObject BuildSettings(Transform parent)
+        {
+            GameObject p = Panel(parent, "SettingsPanel");
+            Label(p.transform, "H", "SETTINGS", 34, TR, new Vector2(-64f, -240f),
+                  new Vector2(560f, 44f), TextAnchor.UpperRight, Accent);
+            float y = -310f;
+            _menu.volumeLabel      = SettingRow(p.transform, "Volume",      y, nameof(MainMenu.StepVolume));       y -= 70f;
+            _menu.qualityLabel     = SettingRow(p.transform, "Quality",     y, nameof(MainMenu.StepQuality));      y -= 70f;
+            _menu.fullscreenLabel  = SettingRow(p.transform, "Fullscreen",  y, nameof(MainMenu.ToggleFullscreen)); y -= 70f;
+            _menu.participantsLabel= SettingRow(p.transform, "Players",     y, nameof(MainMenu.StepParticipants)); y -= 70f;
+            _menu.hostVoiceLabel   = SettingRow(p.transform, "AI host",     y, nameof(MainMenu.ToggleHostVoice));  y -= 70f;
+            Label(p.transform, "HostNote",
+                  "Turn the host off to check the game still works without him.",
+                  17, TR, new Vector2(-64f, y), new Vector2(560f, 50f), TextAnchor.UpperRight, Dim);
+            Back(p.transform, y - 60f, 0f);
+            return p;
+        }
+
+        static GameObject BuildControls(Transform parent)
+        {
+            GameObject p = Panel(parent, "ControlsPanel");
+            Label(p.transform, "H", "CONTROLS", 34, TR, new Vector2(-64f, -240f),
+                  new Vector2(560f, 44f), TextAnchor.UpperRight, Accent);
+            string body =
+                "MOVE\n" +
+                "   W A S D   or   Arrow Keys\n" +
+                "   Left stick on a gamepad\n\n" +
+                "THAT IS THE WHOLE CONTROL SCHEME.\n" +
+                "Two action buttons maximum is a hard rule,\n" +
+                "and Red Light does not need either of them.\n\n" +
+                "Move on GO. Freeze on STOP.\n" +
+                "Barnaby is biased and he lies.";
+            Label(p.transform, "Body", body, 22, TR, new Vector2(-64f, -300f),
+                  new Vector2(560f, 420f), TextAnchor.UpperRight, Ink);
+            Back(p.transform, -740f, 0f);
+            return p;
+        }
+
+        static GameObject BuildMultiplayer(Transform parent)
+        {
+            GameObject p = Panel(parent, "MultiplayerPanel");
+            Label(p.transform, "H", "MULTIPLAYER", 34, TR, new Vector2(-64f, -240f),
+                  new Vector2(560f, 44f), TextAnchor.UpperRight, Accent);
+
+            _menu.steamHostButton = VoidButton(p.transform, "HOST ON STEAM", TR, new Vector2(-64f, -300f),
+                                               new Vector2(560f, 74f), new Color(0.20f, 0.45f, 0.75f), 26,
+                                               nameof(MainMenu.HostOnSteam));
+            Label(p.transform, "CodeNote", "you get a 5-letter join code to share", 17, TR,
+                  new Vector2(-64f, -380f), new Vector2(560f, 28f), TextAnchor.UpperRight, Dim);
+
+            _menu.joinCodeField = Field(p.transform, "JoinCode", "JOIN CODE", TR,
+                                        new Vector2(-244f, -416f), new Vector2(380f, 60f));
+            _menu.steamJoinButton = VoidButton(p.transform, "JOIN", TR, new Vector2(-64f, -416f),
+                                               new Vector2(168f, 60f), new Color(0.25f, 0.55f, 0.40f), 24,
+                                               nameof(MainMenu.JoinByCode));
+
+            _menu.joinAddressField = Field(p.transform, "JoinAddr", "localhost", TR,
+                                           new Vector2(-244f, -492f), new Vector2(380f, 56f));
+            VoidButton(p.transform, "DIRECT", TR, new Vector2(-64f, -492f), new Vector2(168f, 56f),
+                       new Color(0.33f, 0.33f, 0.40f), 22, nameof(MainMenu.JoinByAddress));
+
+            _menu.steamLabel = Label(p.transform, "SteamStatus", "", 18, TR, new Vector2(-64f, -566f),
+                                     new Vector2(560f, 70f), TextAnchor.UpperRight, new Color(1f, 0.6f, 0.55f));
+            Back(p.transform, -650f, 0f);
+            return p;
+        }
+
+        // ---------- widgets ----------
+
+        static readonly Vector2 TL = new Vector2(0f, 1f);
+        static readonly Vector2 TR = new Vector2(1f, 1f);
+
+        /// <summary>A UI GameObject is created WITH its RectTransform - adding one later
+        /// to an object that already has a Transform is the usual source of grief.</summary>
+        static GameObject UI(string name, Transform parent)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            return go;
+        }
+
+        static GameObject Panel(Transform parent, string name)
+        {
+            GameObject go = UI(name, parent);
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            return go;
+        }
+
+        static RectTransform Place(GameObject go, Vector2 anchor, Vector2 pos, Vector2 size)
+        {
+            // NOT '??'. Unity overloads == for its objects but ?? uses real null, so a
+            // missing component can slip through the coalesce and blow up later. Every UI
+            // object here is created WITH a RectTransform (see UI()), and this is the belt
+            // and braces.
+            RectTransform rt = go.GetComponent<RectTransform>();
+            if (rt == null) rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
+            rt.anchoredPosition = pos; rt.sizeDelta = size;
+            return rt;
+        }
+
+        static Text Label(Transform parent, string name, string text, int size, Vector2 anchor,
+                          Vector2 pos, Vector2 sizeD, TextAnchor align, Color colour)
+        {
+            GameObject go = UI(name, parent);
+            Place(go, anchor, pos, sizeD);
+            Text t = go.AddComponent<Text>();
+            t.font = _font; t.fontSize = size; t.text = text; t.alignment = align; t.color = colour;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.raycastTarget = false;
+            return t;
+        }
+
+        static Button Shell(Transform parent, string name, string text, Vector2 anchor, Vector2 pos,
+                            Vector2 size, Color colour, int fontSize)
+        {
+            GameObject go = UI(name, parent);
+            Place(go, anchor, pos, size);
+            Image img = go.AddComponent<Image>();
+            img.color = colour;
+            Button b = go.AddComponent<Button>();
+            b.targetGraphic = img;
+            ColorBlock cb = b.colors;
+            cb.highlightedColor = Color.Lerp(colour, Color.white, 0.22f);
+            cb.pressedColor     = Color.Lerp(colour, Color.black, 0.22f);
+            cb.disabledColor    = new Color(colour.r, colour.g, colour.b, 0.22f);
+            b.colors = cb;
+            Text t = Label(go.transform, "Text", text, fontSize, new Vector2(0.5f, 0.5f),
+                           Vector2.zero, size, TextAnchor.MiddleCenter, Color.white);
+            Place(t.gameObject, new Vector2(0.5f, 0.5f), Vector2.zero, size);
+            return b;
+        }
+
+        static Button VoidButton(Transform parent, string text, Vector2 anchor, Vector2 pos,
+                                 Vector2 size, Color colour, int fontSize, string method)
+        {
+            Button b = Shell(parent, text, text, anchor, pos, size, colour, fontSize);
+            UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(
+                b.onClick, (UnityEngine.Events.UnityAction)System.Delegate.CreateDelegate(
+                    typeof(UnityEngine.Events.UnityAction), _menu, method));
+            return b;
+        }
+
+        static Button IntButton(Transform parent, string name, string text, Vector2 anchor, Vector2 pos,
+                                Vector2 size, Color colour, int fontSize, string method, int arg)
+        {
+            Button b = Shell(parent, name, text, anchor, pos, size, colour, fontSize);
+            UnityEditor.Events.UnityEventTools.AddIntPersistentListener(
+                b.onClick, (UnityEngine.Events.UnityAction<int>)System.Delegate.CreateDelegate(
+                    typeof(UnityEngine.Events.UnityAction<int>), _menu, method), arg);
+            return b;
+        }
+
+        static void BigButton(Transform parent, string text, float y, Color c, int size, string method)
+            => VoidButton(parent, text, TR, new Vector2(-64f, y), new Vector2(430f, 96f), c, size, method);
+
+        static void NavButton(Transform parent, string text, float y, int panel)
+            => IntButton(parent, text, text, TR, new Vector2(-64f, y), new Vector2(430f, 66f),
+                         new Color(1f, 1f, 1f, 0.13f), 26, nameof(MainMenu.Show), panel);
+
+        static void Back(Transform parent, float y, float extraX)
+            => IntButton(parent, "Back", "BACK", TR, new Vector2(-64f + extraX, y), new Vector2(200f, 54f),
+                         new Color(1f, 1f, 1f, 0.12f), 22, nameof(MainMenu.Show), (int)MainMenu.Panel.Home);
+
+        static InputField Field(Transform parent, string name, string placeholder, Vector2 anchor,
+                                Vector2 pos, Vector2 size)
+        {
+            GameObject go = UI(name, parent);
+            Place(go, anchor, pos, size);
+            Image bg = go.AddComponent<Image>();
+            bg.color = Slate;
+            Text text = Label(go.transform, "Text", "", 24, new Vector2(0.5f, 0.5f), Vector2.zero,
+                              size - new Vector2(28f, 10f), TextAnchor.MiddleLeft, Ink);
+            text.raycastTarget = true;
+            Text ph = Label(go.transform, "Placeholder", placeholder, 24, new Vector2(0.5f, 0.5f),
+                            Vector2.zero, size - new Vector2(28f, 10f), TextAnchor.MiddleLeft, Dim);
+            InputField f = go.AddComponent<InputField>();
+            f.textComponent = text; f.placeholder = ph; f.targetGraphic = bg;
+            return f;
+        }
+
+        /// <summary>"Caption   [&lt;]  value  [&gt;]" for one customisation row.</summary>
+        static Text LookRow(Transform parent, string caption, int row, float y)
+        {
+            Label(parent, caption + "Cap", caption, 18, TR, new Vector2(-64f, y),
+                  new Vector2(560f, 24f), TextAnchor.UpperRight, Dim);
+            IntButton(parent, caption + "-", "<", TR, new Vector2(-490f, y - 24f), new Vector2(52f, 44f),
+                      Slate, 24, nameof(MainMenu.StepLook), row * 10 + 0);
+            Text v = Label(parent, caption + "Val", "-", 26, TR, new Vector2(-124f, y - 24f),
+                           new Vector2(360f, 44f), TextAnchor.MiddleCenter, Ink);
+            IntButton(parent, caption + "+", ">", TR, new Vector2(-64f, y - 24f), new Vector2(52f, 44f),
+                      Slate, 24, nameof(MainMenu.StepLook), row * 10 + 1);
+            return v;
+        }
+
+        static Text SettingRow(Transform parent, string caption, float y, string method)
+        {
+            Label(parent, caption + "Cap", caption, 20, TR, new Vector2(-64f, y),
+                  new Vector2(560f, 26f), TextAnchor.UpperRight, Dim);
+            IntButton(parent, caption + "-", "<", TR, new Vector2(-490f, y - 26f), new Vector2(52f, 44f),
+                      Slate, 24, method, -1);
+            Text v = Label(parent, caption + "Val", "-", 24, TR, new Vector2(-124f, y - 26f),
+                           new Vector2(360f, 44f), TextAnchor.MiddleCenter, Ink);
+            IntButton(parent, caption + "+", ">", TR, new Vector2(-64f, y - 26f), new Vector2(52f, 44f),
+                      Slate, 24, method, 1);
+            return v;
+        }
+    }
+}

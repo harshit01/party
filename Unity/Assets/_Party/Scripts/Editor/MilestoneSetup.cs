@@ -44,52 +44,23 @@ namespace Party.EditorTools
         /// root; squash, stretch and lean happen on the child, so the juice can never
         /// fight the netcode.
         /// </summary>
-        static (Transform visual, Transform face, Renderer body) BuildBody(GameObject root)
+        /// <summary>
+        /// Just an empty child. The FILAMENT is built into it at runtime from the synced
+        /// look, so appearance is data rather than a baked prefab - which is what lets
+        /// every contestant look different without an art pipeline.
+        /// </summary>
+        static Transform BuildBody(GameObject root)
         {
             GameObject visual = new GameObject("Visual");
             visual.transform.SetParent(root.transform, false);
-
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            Object.DestroyImmediate(body.GetComponent<Collider>());
-            body.transform.SetParent(visual.transform, false);
-
-            // A face gives a capsule a front, and a front is most of what makes it a
-            // character rather than a marker.
-            GameObject face = new GameObject("Face");
-            face.transform.SetParent(visual.transform, false);
-            face.transform.localPosition = new Vector3(0f, 0.42f, 0f);
-
-            Material white = PresentationSetup.Lit("EyeWhite", Color.white, 0.55f);
-            Material pupil = PresentationSetup.Lit("EyePupil", new Color(0.06f, 0.06f, 0.09f), 0.7f);
-
-            for (int s = -1; s <= 1; s += 2)
-            {
-                GameObject eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                eye.name = s < 0 ? "EyeL" : "EyeR";
-                Object.DestroyImmediate(eye.GetComponent<Collider>());
-                eye.transform.SetParent(face.transform, false);
-                eye.transform.localPosition = new Vector3(s * 0.17f, 0f, 0.36f);
-                eye.transform.localScale = Vector3.one * 0.26f;
-                eye.GetComponent<Renderer>().sharedMaterial = white;
-
-                GameObject p2 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                p2.name = "Pupil";
-                Object.DestroyImmediate(p2.GetComponent<Collider>());
-                p2.transform.SetParent(eye.transform, false);
-                p2.transform.localPosition = new Vector3(0f, 0f, 0.34f);
-                p2.transform.localScale = Vector3.one * 0.55f;
-                p2.GetComponent<Renderer>().sharedMaterial = pupil;
-            }
-
-            return (visual.transform, face.transform, body.GetComponent<Renderer>());
+            return visual.transform;
         }
 
         static GameObject BuildPlayerPrefab()
         {
             GameObject root = new GameObject("PartyPlayer");
 
-            var (visual, face, bodyRend) = BuildBody(root);
+            Transform visual = BuildBody(root);
 
             CapsuleCollider col = root.AddComponent<CapsuleCollider>();
             col.height = 2f; col.radius = 0.5f;
@@ -129,13 +100,12 @@ namespace Party.EditorTools
 
             PartyPlayer pp = root.AddComponent<PartyPlayer>();
             SerializedObject so = new SerializedObject(pp);
-            so.FindProperty("bodyRenderer").objectReferenceValue = bodyRend;
+            so.FindProperty("juiceVisual").objectReferenceValue = visual;
             so.FindProperty("nameTag").objectReferenceValue = tm;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             PlayerJuice juice = root.AddComponent<PlayerJuice>();
             juice.visual = visual;
-            juice.face   = face;
 
             System.IO.Directory.CreateDirectory("Assets/_Party/Prefabs");
             GameObject asset = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);

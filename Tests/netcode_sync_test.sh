@@ -24,6 +24,11 @@ rm -f "$HOST_LOG" "$CLI_LOG"
 
 [ -x "$APP" ] || { echo "FAIL: player not found at $APP"; exit 1; }
 
+# Kill any player left over from a previous suite. Running the suites back to back
+# produced "SocketException: Address already in use" and the new client silently
+# connected to the OLD host, which invalidated every assertion that followed.
+pkill -f 'Party.app/Contents/MacOS/Party' 2>/dev/null; sleep 1
+
 echo "== host: 3 participants (1 human slot + 2 bots), autopilot on =="
 "$APP" -batchmode -nographics -partyrole host -partytarget 3 -partyseconds 34 \
        -partyautopilot -logFile "$HOST_LOG" &

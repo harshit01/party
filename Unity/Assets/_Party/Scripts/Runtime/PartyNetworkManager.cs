@@ -47,7 +47,23 @@ namespace Party
         public Transport steamTransport;
 
         readonly List<PartyPlayer> _bots = new List<PartyPlayer>();
+
+        // STABLE IDENTITY. Slots are claimed and released, never just incremented.
+        // With a running counter the bots were renamed and recoloured every time one was
+        // destroyed and refilled, so "Bevel" in round 1 was a different capsule in round
+        // 2 - which destroys the one thing the host is for. Barnaby's running gags depend
+        // on a name meaning the same participant all night.
+        readonly HashSet<int> _usedSlots = new HashSet<int>();
         int _nextSlot;
+
+        int ClaimSlot()
+        {
+            for (int i = 0; i < 8; i++)
+                if (_usedSlots.Add(i)) return i;
+            return _nextSlot++ % 8;   // should never happen: 8 participants maximum
+        }
+
+        void ReleaseSlot(int slot) => _usedSlots.Remove(slot);
 
         /// <summary>
         /// Choose the transport before Mirror binds it in base.Awake().
@@ -91,6 +107,7 @@ namespace Party
         {
             base.OnStartServer();
             _bots.Clear();
+            _usedSlots.Clear();
             _nextSlot = 0;
 
             if (serverSpawnOnStart != null)
@@ -114,10 +131,17 @@ namespace Party
                 ? Instantiate(playerPrefab, start.position, start.rotation)
                 : Instantiate(playerPrefab);
 
+            int slot = ClaimSlot();
             PartyPlayer p = go.GetComponent<PartyPlayer>();
             p.isBot       = false;
+            p.slot        = slot;
             p.displayName = "Player " + (conn.connectionId);
-            p.colour      = Palette[_nextSlot++ % Palette.Length];
+            p.colour      = Palette[slot % Palette.Length];
+            // The host wears what it chose in the menu. Remote clients send their own
+            // look after connecting; until then they get a slot-derived default.
+            p.lookPacked  = conn.connectionId == 0
+                ? PartyPlayer.Pack(Character.PlayerProfile.Look)
+                : PartyPlayer.Pack(DefaultLook(slot));
 
             NetworkServer.AddPlayerForConnection(conn, go);
             Debug.Log($"[Party] human joined as '{p.displayName}'. participants={CountParticipants()}");
@@ -146,11 +170,13 @@ namespace Party
                     ? Instantiate(prefab, start.position, start.rotation)
                     : Instantiate(prefab);
 
+                int slot = ClaimSlot();
                 PartyPlayer p = go.GetComponent<PartyPlayer>();
                 p.isBot       = true;
-                p.displayName = BotNames[_nextSlot % BotNames.Length];
-                p.colour      = Palette[_nextSlot % Palette.Length];
-                _nextSlot++;
+                p.slot        = slot;
+                p.displayName = BotNames[slot % BotNames.Length];
+                p.colour      = Palette[slot % Palette.Length];
+                p.lookPacked  = PartyPlayer.Pack(DefaultLook(slot));
 
                 NetworkServer.Spawn(go);   // no connection: nobody owns a bot
                 _bots.Add(p);
@@ -165,10 +191,23 @@ namespace Party
                 if (_bots[i] == null) { _bots.RemoveAt(i); continue; }
                 PartyPlayer b = _bots[i];
                 _bots.RemoveAt(i);
+                ReleaseSlot(b.slot);
                 NetworkServer.Destroy(b.gameObject);
                 return;
             }
         }
+
+        /// <summary>A distinct but deterministic look per slot, so bots are telling apart.</summary>
+        static Character.LookConfig DefaultLook(int slot) => new Character.LookConfig
+        {
+            chassis   = slot % 8,
+            livery    = slot % 5,
+            filament  = slot % 6,
+            shape     = slot % 5,
+            dome      = slot % 4,
+            mask      = (slot * 3) % 5,
+            accessory = (slot * 2) % 5,
+        };
 
         int CountParticipants()
         {

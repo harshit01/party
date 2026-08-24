@@ -83,6 +83,7 @@ MonoBehaviour:
   syncInterval: 0
   finishZ: 46
   startZ: -46
+  roundTimeLimit: 70
   countdownSeconds: 3
   goDuration: {x: 1.1, y: 2.6}
   stopDuration: {x: 1.5, y: 2.6}

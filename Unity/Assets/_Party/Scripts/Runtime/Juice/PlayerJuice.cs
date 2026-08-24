@@ -18,7 +18,6 @@ namespace Party.Juice
     {
         [Tooltip("Visual-only child. Never the networked root.")]
         public Transform visual;
-        public Transform face;
 
         [Header("Feel")]
         public float leanDegrees   = 14f;
@@ -34,7 +33,7 @@ namespace Party.Juice
         {
             _rb = GetComponent<Rigidbody>();
             _player = GetComponent<PartyPlayer>();
-            if (visual != null) _baseScale = visual.localScale;
+            if (visual != null) _baseScale = visual.localScale == Vector3.zero ? Vector3.one : visual.localScale;
         }
 
         void LateUpdate()
@@ -68,12 +67,6 @@ namespace Party.Juice
             }
             visual.localRotation = Quaternion.Slerp(visual.localRotation, lean, Time.deltaTime * responsiveness);
 
-            // The face turns to look where it is going, so a capsule has a front.
-            if (face != null && speed > 0.3f)
-            {
-                Quaternion look = Quaternion.LookRotation(flat.normalized, Vector3.up);
-                face.rotation = Quaternion.Slerp(face.rotation, look, Time.deltaTime * 6f);
-            }
         }
 
         void Topple()

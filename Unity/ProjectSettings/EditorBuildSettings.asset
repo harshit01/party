@@ -6,10 +6,13 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/_Party/Scenes/NetTest.unity
-    guid: d02adf0dca15940c78363c10118720f8
+    path: Assets/_Party/Scenes/Menu.unity
+    guid: 83a69929b2a34465a9e1309c5a43670b
   - enabled: 1
     path: Assets/_Party/Scenes/RedLight.unity
     guid: b82d0f5dab2de42989f80c1a4712617b
+  - enabled: 1
+    path: Assets/_Party/Scenes/NetTest.unity
+    guid: d02adf0dca15940c78363c10118720f8
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

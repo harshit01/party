@@ -39,6 +39,8 @@ namespace Party.RedLight
         public float startZ = -46f;
 
         [Header("Timing")]
+        [Tooltip("Hard cap. Whoever is furthest up the lane wins when it expires.")]
+        public float roundTimeLimit = 70f;
         public float countdownSeconds = 3f;
         // Short, unpredictable GO windows. Long ones let everyone sprint the whole
         // course; the tension is in being caught mid-stride.
@@ -66,6 +68,8 @@ namespace Party.RedLight
         bool   _snapshotTaken;
         double _judgeAt;
         int    _stopsThisRound, _spares, _frames;
+        double _roundEndsAt;
+        double _nextStandingPush;
 
         void Awake()
         {
@@ -97,6 +101,7 @@ namespace Party.RedLight
             }
 
             verdictText = "";
+            _roundEndsAt = NetworkTime.time + roundTimeLimit;
             SetPhase(RoundPhase.Countdown, countdownSeconds);
             callText = "Places, please.";
             if (_voice != null) _voice.PrefetchRoundIntro(round, Players());
@@ -105,6 +110,16 @@ namespace Party.RedLight
         void Update()
         {
             if (!isServer) return;
+
+            // Push standing onto every player so the FILAMENT shows it. This is the whole
+            // point of the character design: his favouritism becomes visible in the room
+            // instead of living in a log nobody reads.
+            if (_bias != null && NetworkTime.time >= _nextStandingPush)
+            {
+                _nextStandingPush = NetworkTime.time + 0.5;
+                foreach (PartyPlayer p in Players())
+                    p.standing = _bias.AffinityOf(p.netId);
+            }
             if (phase == RoundPhase.Waiting || phase == RoundPhase.Finished) return;
 
             // Judging happens once, after the grace window, not the moment STOP is called.
@@ -236,6 +251,31 @@ namespace Party.RedLight
                 Summarise("winner:" + p.displayName);
                 if (_voice != null) _voice.PrefetchFinale(p.displayName, Players());
                 return;
+            }
+
+            // A ROUND MUST END. Without this a survivor who never reaches the line keeps
+            // the game running forever - observed in testing: 4 of 5 out, one straggler,
+            // and 90 seconds with no result. A party minigame is meant to be short
+            // (MINIGAMES.md: 8 rounds in a ~30 minute session), so time runs out and the
+            // furthest player takes it.
+            if (NetworkTime.time >= _roundEndsAt && phase != RoundPhase.Finished)
+            {
+                PartyPlayer best = null;
+                float bestZ = float.MinValue;
+                foreach (PartyPlayer p in Players())
+                {
+                    if (p.eliminated) continue;
+                    if (p.transform.position.z > bestZ) { bestZ = p.transform.position.z; best = p; }
+                }
+                if (best != null)
+                {
+                    best.finished = true;
+                    verdictText = $"Time! {best.displayName} was furthest.";
+                    SetPhase(RoundPhase.Finished, 0f);
+                    if (_voice != null) _voice.PrefetchFinale(best.displayName, Players());
+                    Summarise("timeout:" + best.displayName);
+                    return;
+                }
             }
 
             int alive = 0;

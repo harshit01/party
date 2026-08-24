@@ -24,6 +24,14 @@ namespace Party.RedLight
         float _freezeAt = -1f;
         bool  _twitchingThisStop;
 
+        // Unsticking. Bots drive straight up the lane, so a pillar or a piston pins them
+        // and they push into it forever. Observed in play AND headless: four of five
+        // eliminated, one survivor wedged against a pillar, and the round never ended.
+        float _lastZ = float.MinValue;
+        float _stuckSince;
+        float _dodgeUntil;
+        float _dodgeDir;
+
         public RedLightBotInput(Transform self)
         {
             _self       = self;
@@ -50,7 +58,24 @@ namespace Party.RedLight
                 }
 
                 if (d.phase == RoundPhase.Go)
+                {
+                    float z = _self.position.z;
+
+                    // Making progress? Reset the stuck timer.
+                    if (z > _lastZ + 0.05f) { _lastZ = z; _stuckSince = Time.time; }
+                    else if (Time.time - _stuckSince > 0.9f && Time.time > _dodgeUntil)
+                    {
+                        // Pinned. Commit to a side for a moment and slide off the obstacle.
+                        _dodgeDir = Random.value < 0.5f ? -1f : 1f;
+                        _dodgeUntil = Time.time + Random.Range(0.5f, 1.1f);
+                        _stuckSince = Time.time;
+                    }
+
+                    if (Time.time < _dodgeUntil)
+                        return Vector2.ClampMagnitude(new Vector2(_dodgeDir, 0.35f), 1f);
+
                     return Vector2.ClampMagnitude(new Vector2(_drift, 1f), 1f);
+                }
 
                 if (d.MustFreeze)
                 {

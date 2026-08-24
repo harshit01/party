@@ -24,12 +24,64 @@ namespace Party
         /// <summary>True for a slot filled by a bot. Synced so clients can label it.</summary>
         [SyncVar(hook = nameof(OnNameChanged))]   public bool   isBot;
 
+        /// <summary>Stable participant slot 0-7. Owns this player's name and colour.</summary>
+        [SyncVar] public int slot;
+
+        /// <summary>
+        /// The Filament's appearance, 7 choices packed 3 bits each into one int.
+        ///
+        /// Packed rather than seven SyncVars: it is one 21-bit value on the wire instead
+        /// of seven separate dirty-bit entries, and appearance changes every round.
+        /// </summary>
+        [SyncVar(hook = nameof(OnLookChanged))] public int lookPacked;
+
+        /// <summary>
+        /// Standing with Barnaby, -1 grudge .. +1 favourite, pushed from BarnabyBias.
+        ///
+        /// THIS IS WHY THE FILAMENT EXISTS. His bias otherwise lives only in a server log,
+        /// so a framed player cannot tell cheating from their own mistake. Wired to the
+        /// glow, the whole room sees he has favourites before he ever calls anyone out.
+        /// </summary>
+        [SyncVar(hook = nameof(OnStandingChanged))] public float standing;
+
+        Character.FilamentRig _filament;
+
+        public static int Pack(Character.LookConfig c) =>
+            (c.chassis & 7) | ((c.livery & 7) << 3) | ((c.filament & 7) << 6) |
+            ((c.shape & 7) << 9) | ((c.dome & 7) << 12) | ((c.mask & 7) << 15) |
+            ((c.accessory & 7) << 18);
+
+        public static Character.LookConfig Unpack(int p) => new Character.LookConfig
+        {
+            chassis   = p & 7,
+            livery    = (p >> 3) & 7,
+            filament  = (p >> 6) & 7,
+            shape     = (p >> 9) & 7,
+            dome      = (p >> 12) & 7,
+            mask      = (p >> 15) & 7,
+            accessory = (p >> 18) & 7,
+        };
+
+        void OnLookChanged(int _, int __) => BuildLook();
+        void OnStandingChanged(float _, float now) { if (_filament != null) _filament.standing = now; }
+
+        void BuildLook()
+        {
+            Transform host = juiceVisual != null ? juiceVisual : transform;
+            Character.CharacterLook.Build(host, Unpack(lookPacked), out Renderer body, out _filament);
+            bodyRenderer = body;
+            if (_filament != null) _filament.standing = standing;
+            ApplyColour();
+        }
+
         /// <summary>Called out by Barnaby - fairly or otherwise. Cannot move.</summary>
         [SyncVar(hook = nameof(OnStateChanged))]  public bool   eliminated;
         /// <summary>Crossed the line.</summary>
         [SyncVar(hook = nameof(OnStateChanged))]  public bool   finished;
 
         [Header("Scene refs")]
+        [Tooltip("Visual-only child the Filament is built under. Never the networked root.")]
+        [SerializeField] Transform juiceVisual;
         [SerializeField] Renderer  bodyRenderer;
         [SerializeField] TextMesh  nameTag;
 
@@ -56,6 +108,7 @@ namespace Party
 
         public override void OnStartClient()
         {
+            BuildLook();
             ApplyName();
             ApplyColour();
         }
@@ -137,6 +190,18 @@ namespace Party
 
         void LateUpdate()
         {
+            if (_filament != null)
+            {
+                var d = RedLight.RedLightDirector.Instance;
+                _filament.mood =
+                    eliminated ? Character.FilamentMood.Broken :
+                    finished   ? Character.FilamentMood.Smug   :
+                    d == null  ? Character.FilamentMood.Idle   :
+                    d.MustFreeze ? Character.FilamentMood.Frozen :
+                    d.phase == RedLight.RoundPhase.Go ? Character.FilamentMood.Running :
+                    Character.FilamentMood.Idle;
+            }
+
             // Billboard the label at whatever camera is rendering.
             if (nameTag == null) return;
             Camera c = Camera.main;
@@ -159,9 +224,10 @@ namespace Party
         {
             // Eliminated players go grey so being out is readable at a glance across a
             // room, which is the only way anyone reads a party game screen.
-            Color c = eliminated ? new Color(0.35f, 0.35f, 0.38f) : colour;
-            if (bodyRenderer != null) bodyRenderer.material.color = c;
-            if (nameTag != null)      nameTag.color = c;
+            // The chassis colour comes from the look now; elimination greys it out.
+            if (eliminated && bodyRenderer != null)
+                bodyRenderer.material.SetColor("_BaseColor", new Color(0.32f, 0.32f, 0.36f));
+            if (nameTag != null) nameTag.color = eliminated ? new Color(0.6f, 0.6f, 0.65f) : colour;
         }
     }
 }

@@ -117,6 +117,7 @@ namespace Party.EditorTools
             netGo.AddComponent<PartyHUD>();
             netGo.AddComponent<RedLightHUD>();
             netGo.AddComponent<MilestoneAutoRun>();
+            netGo.AddComponent<Party.Character.MatchBootstrap>();
 
             // Director as a server-spawned prefab. NO NetworkIdentity on this object.
             GameObject directorPrefab = BuildDirectorPrefab();
