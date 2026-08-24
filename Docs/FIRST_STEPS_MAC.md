@@ -25,9 +25,31 @@ they are committed is a rewrite of history.
 
 ```bash
 brew install git-lfs && git lfs install
-git lfs track "*.png" "*.jpg" "*.psd" "*.fbx" "*.wav" "*.mp3" "*.ogg" "*.unity" "*.asset"
-git add .gitattributes && git commit -m "Track binary assets with LFS"
 ```
+
+**CORRECTED Aug 2026 — do NOT put `*.unity` and `*.asset` in LFS.** The original
+line here did. Unity 6 writes both as *text YAML*: the URP template alone produces
+31 `.asset` files, including every file in `ProjectSettings/`. In LFS they become
+opaque blobs — no diffs, and a scene or project-settings conflict between the Mac
+and the Windows laptop can only be resolved by discarding one side wholesale.
+
+The committed `.gitattributes` therefore puts only genuinely binary types in LFS
+and routes Unity's YAML through Unity's own merge tool.
+
+**Register the merge driver once per machine** (the path is machine-local, so it
+lives in `.git/config`, not in the repo):
+
+```bash
+# macOS — note it is under Helpers/, not Tools/ as Unity's docs claim
+UYM="/Applications/Unity/Hub/Editor/6000.5.9f1/Unity.app/Contents/Helpers/UnityYAMLMerge"
+git config --local merge.unityyamlmerge.name "Unity SmartMerge"
+git config --local merge.unityyamlmerge.driver "'$UYM' merge -p \"\$BASE\" \"\$REMOTE\" \"\$LOCAL\" \"\$MERGED\""
+git config --local merge.unityyamlmerge.recursive binary
+```
+
+On the Windows laptop the binary is at
+`C:\Program Files\Unity\Hub\Editor\<version>\Editor\Data\Tools\UnityYAMLMerge.exe`.
+**Until that is registered on both machines, scene merges will conflict as plain text.**
 
 ---
 
