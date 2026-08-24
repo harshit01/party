@@ -81,7 +81,16 @@ party/
     └── test_steerability.py  from the dropped concept; kept for its method
 ```
 
-**Nothing exists in Unity yet.** No Unity project has been created for this game.
+**Unity project EXISTS as of Aug 2026** at `Unity/` — Unity 6000.5.9f1, 3D URP,
+created from the editor's own `com.unity.template.urp-blank`. Netcode stack is
+installed and compiles clean: Mirror 96.11.2 (vendored in `Assets/Mirror`),
+FizzySteamworks 6.0.1 and Steamworks.NET 2025.164.1 (both UPM git deps, pinned in
+`packages-lock.json`). Input System 1.20.0 ships with the template.
+
+**No gameplay code has been written.** The next thing to build is the netcode
+milestone in §5 step 2a.
+
+Repo: private, `harshit01/party`, pushed over the `github-party` SSH alias.
 
 ## 4. The host — built and proven
 
@@ -114,13 +123,10 @@ staring at a screen kills party pace.
 3. **Private GitHub repo** under the the private org; push this folder (see §7).
 
 **Build, in order** (full detail in `Docs/FIRST_STEPS_MAC.md`):
-0. **Git remote + Git LFS BEFORE the Unity project exists.**
-1. Unity project, **3D URP with primitive art** (capsules and spheres; physics does
-   the acting, no artist needed until minigames survive playtesting).
-2. **Pick the net stack before writing gameplay** — Mirror or Unity Netcode for
-   GameObjects over a Steam transport (FizzySteamworks / Facepunch.Steamworks).
-   Retrofitting netcode is far worse than retrofitting anything else. Add the Unity
-   **Input System** package at the same time (keyboard + gamepad).
+0. ~~Git remote + Git LFS~~ **DONE.**
+1. ~~Unity project, 3D URP~~ **DONE.**
+2. ~~Pick and install the net stack~~ **DONE** — Mirror + FizzySteamworks, verified
+   compiling together by a headless build.
 2a. **FIRST MILESTONE - PROVE THE NETCODE.** Two machines, a Steam lobby, two
    capsules moving on a flat plane in sync. Not a game. Netcode is now the biggest
    technical risk and every concept in this project has been corrected by a cheap
