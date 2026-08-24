@@ -24,6 +24,11 @@ namespace Party
         /// <summary>True for a slot filled by a bot. Synced so clients can label it.</summary>
         [SyncVar(hook = nameof(OnNameChanged))]   public bool   isBot;
 
+        /// <summary>Called out by Barnaby - fairly or otherwise. Cannot move.</summary>
+        [SyncVar(hook = nameof(OnStateChanged))]  public bool   eliminated;
+        /// <summary>Crossed the line.</summary>
+        [SyncVar(hook = nameof(OnStateChanged))]  public bool   finished;
+
         [Header("Scene refs")]
         [SerializeField] Renderer  bodyRenderer;
         [SerializeField] TextMesh  nameTag;
@@ -41,7 +46,12 @@ namespace Party
         public override void OnStartServer()
         {
             // A bot drives itself on the host. A human's input arrives by command.
-            if (isBot) _input = new BotMoveInput(transform);
+            // Bot policy is per-minigame. Red Light needs freeze-on-stop behaviour;
+            // without a director (the bare netcode scene) they just wander.
+            if (isBot)
+                _input = RedLight.RedLightDirector.Instance != null
+                    ? new RedLight.RedLightBotInput(transform)
+                    : (IMoveInput)new BotMoveInput(transform);
         }
 
         public override void OnStartClient()
@@ -85,12 +95,34 @@ namespace Party
             _pendingMove = Vector2.ClampMagnitude(move, 1f);
         }
 
+        [Server]
+        public void ServerTeleport(Vector3 position)
+        {
+            _rb.linearVelocity = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
+            transform.position = position;
+            // Tell NetworkTransform this is a jump, not motion to interpolate through.
+            GetComponent<NetworkTransformBase>()?.Reset();
+        }
+
         void FixedUpdate()
         {
             if (!isServer) return;   // host-authoritative: only the host integrates physics
 
             // Bots produce their input here; humans' arrived via CmdMove.
             if (isBot && _input != null) _pendingMove = _input.Move;
+
+            // A round may forbid movement entirely (eliminated, finished, countdown).
+            // Note this does NOT stop a player pressing keys during STOP - moving when
+            // told to freeze is exactly the mistake the game is about.
+            RedLight.RedLightDirector dir = RedLight.RedLightDirector.Instance;
+            if (dir != null && !dir.MovementAllowed(this))
+            {
+                _pendingMove = Vector2.zero;
+                Vector3 v = _rb.linearVelocity;
+                _rb.linearVelocity = new Vector3(v.x * 0.6f, v.y, v.z * 0.6f);
+                return;
+            }
 
             Vector3 dir = new Vector3(_pendingMove.x, 0f, _pendingMove.y);
             if (dir.sqrMagnitude > 0.0001f) _rb.AddForce(dir * moveForce, ForceMode.Acceleration);
@@ -111,19 +143,25 @@ namespace Party
             if (c != null) nameTag.transform.rotation = c.transform.rotation;
         }
 
+        void OnStateChanged(bool _, bool __) { ApplyName(); ApplyColour(); }
         void OnNameChanged(string _, string __) => ApplyName();
         void OnNameChanged(bool _, bool __)     => ApplyName();
         void OnColourChanged(Color _, Color __) => ApplyColour();
 
         void ApplyName()
         {
-            if (nameTag != null) nameTag.text = isBot ? displayName + " (bot)" : displayName;
+            if (nameTag == null) return;
+            string suffix = eliminated ? "  ✖" : finished ? "  ★" : isBot ? " (bot)" : "";
+            nameTag.text = displayName + suffix;
         }
 
         void ApplyColour()
         {
-            if (bodyRenderer != null) bodyRenderer.material.color = colour;
-            if (nameTag != null)      nameTag.color = colour;
+            // Eliminated players go grey so being out is readable at a glance across a
+            // room, which is the only way anyone reads a party game screen.
+            Color c = eliminated ? new Color(0.35f, 0.35f, 0.38f) : colour;
+            if (bodyRenderer != null) bodyRenderer.material.color = c;
+            if (nameTag != null)      nameTag.color = c;
         }
     }
 }

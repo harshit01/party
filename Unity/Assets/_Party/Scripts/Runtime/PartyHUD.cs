@@ -19,10 +19,19 @@ namespace Party
         string _code = "";
         string _address = "localhost";
 
+        /// <summary>
+        /// Edited locally and pushed to the manager only when you actually start a
+        /// session. It is NOT bound straight to targetParticipants: OnGUI runs a Layout
+        /// pass in which controls have no width, and a slider bound directly returned its
+        /// minimum every frame and silently clamped the participant count to 2.
+        /// </summary>
+        int _target = 4;
+
         void Awake()
         {
             _nm = GetComponent<PartyNetworkManager>();
             _lobby = GetComponent<SteamLobby>();
+            _target = Mathf.Clamp(_nm.targetParticipants, 2, 8);
         }
 
         void OnGUI()
@@ -36,12 +45,18 @@ namespace Party
             if (!NetworkClient.active && !NetworkServer.active)
             {
                 GUILayout.Space(6);
-                _nm.targetParticipants = Mathf.RoundToInt(
-                    GUILayout.HorizontalSlider(_nm.targetParticipants, 2, 8));
-                GUILayout.Label($"participants: {_nm.targetParticipants} " +
-                                $"(you + {_nm.targetParticipants - 1} bots if nobody joins)");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"participants: {_target}");
+                if (GUILayout.Button("-", GUILayout.Width(28))) _target = Mathf.Max(2, _target - 1);
+                if (GUILayout.Button("+", GUILayout.Width(28))) _target = Mathf.Min(8, _target + 1);
+                GUILayout.EndHorizontal();
+                GUILayout.Label($"you + {_target - 1} bots if nobody joins");
 
-                if (GUILayout.Button("Host (local)")) _nm.StartHost();
+                if (GUILayout.Button("Host (local)"))
+                {
+                    _nm.targetParticipants = _target;
+                    _nm.StartHost();
+                }
 
                 GUILayout.Space(4);
                 GUILayout.Label("Join by address:");
@@ -59,7 +74,10 @@ namespace Party
                     GUILayout.Space(8);
                     GUI.enabled = SteamBoot.Ready;
                     if (GUILayout.Button("Host on Steam (get join code)"))
-                        _lobby.HostLobby(_nm.targetParticipants);
+                    {
+                        _nm.targetParticipants = _target;
+                        _lobby.HostLobby(_target);
+                    }
 
                     GUILayout.Label("Join by code:");
                     GUILayout.BeginHorizontal();

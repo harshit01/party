@@ -21,14 +21,16 @@ namespace Party
         public static bool Ready { get; private set; }
         public static string FailureReason { get; private set; } = "not attempted";
 
-        static SteamBoot _instance;
+        // A plain static guard, NOT a GameObject singleton. SteamBoot shares a GameObject
+        // with NetworkManager, so destroying a "duplicate" would take the whole
+        // networking object with it.
+        static bool _initialised;
 
 #if !DISABLESTEAMWORKS
         void Awake()
         {
-            if (_instance != null) { Destroy(gameObject); return; }
-            _instance = this;
-            DontDestroyOnLoad(gameObject);
+            if (_initialised) return;   // never touch this GameObject's lifetime
+            _initialised = true;
 
             if (!Packsize.Test())
                 Debug.LogError("[Steam] Packsize.Test failed - wrong Steamworks.NET binary for this platform.");
@@ -68,9 +70,10 @@ namespace Party
 
         void OnDestroy()
         {
-            if (_instance != this) return;
-            if (Ready) SteamAPI.Shutdown();
+            if (!Ready) return;
+            SteamAPI.Shutdown();
             Ready = false;
+            _initialised = false;
         }
 #else
         void Awake()
