@@ -17,11 +17,13 @@
 [Aa]ssets/AssetStoreTools*
 [Aa]ssets/Plugins/Editor/JetBrains*
 
-# Never commit Steam's redistributable binaries or an appid file
-steam_api*.dll
-steam_api*.so
-steam_api*.dylib
-[Ss]team_appid.txt
+# Steam redistributables: NOT ignored. Steamworks.NET needs them at runtime, and
+# ignoring them would hand the Windows laptop a project that cannot initialise
+# Steam. They come via the UPM package (so they live in the gitignored
+# Library/PackageCache and are resolved per machine), but if the SDK is ever
+# vendored into Assets/ these must be committed - .gitattributes sends the
+# binaries to LFS. steam_appid.txt is likewise committed: both machines need the
+# same appid (480 / Spacewar) for the P2P milestone.
 
 # Visual Studio / Rider / VS Code generated project files
 .vs/
