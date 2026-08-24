@@ -21,6 +21,8 @@ namespace Party.Character
         public int confettiCount = 34;
         public Vector3 area = new Vector3(16f, 10f, 6f);
         public float fallSpeed = 0.55f;
+        [Tooltip("Clouds cross the frame; confetti falls.")]
+        public bool driftSideways;
 
         [Header("Lights")]
         public Light[] pulseLights;
@@ -61,7 +63,7 @@ namespace Party.Character
                 Destroy(c.GetComponent<Collider>());
                 c.transform.SetParent(root.transform, false);
                 c.transform.localPosition = RandomPos(true);
-                float sz = Random.Range(0.35f, 1.5f);
+                float sz = Random.Range(1.4f, 3.6f);   // clouds, not specks
                 c.transform.localScale = new Vector3(sz, sz, 1f);
                 c.transform.localRotation = Quaternion.identity;   // billboards face camera
                 c.GetComponent<Renderer>().sharedMaterial = mats[Random.Range(0, mats.Length)];
@@ -86,8 +88,17 @@ namespace Party.Character
                     Transform t = _confetti[i];
                     if (t == null) continue;
                     Vector3 p = t.localPosition;
-                    p.y -= fallSpeed * Time.deltaTime * (0.18f + (i % 5) * 0.06f);   // drift, not fall
-                    p.x += Mathf.Sin(Time.time * 0.35f + i) * 0.18f * Time.deltaTime;
+                    if (driftSideways)
+                    {
+                        p.x += fallSpeed * Time.deltaTime * (0.35f + (i % 5) * 0.12f);
+                        p.y += Mathf.Sin(Time.time * 0.3f + i) * 0.10f * Time.deltaTime;
+                        if (p.x > area.x * 0.5f) { p = RandomPos(false); p.x = -area.x * 0.5f; }
+                    }
+                    else
+                    {
+                        p.y -= fallSpeed * Time.deltaTime * (0.18f + (i % 5) * 0.06f);
+                        p.x += Mathf.Sin(Time.time * 0.35f + i) * 0.18f * Time.deltaTime;
+                    }
                     if (p.y < -area.y * 0.5f) p = RandomPos(false);
                     t.localPosition = p;
                     if (Camera.main != null) t.forward = Camera.main.transform.forward;

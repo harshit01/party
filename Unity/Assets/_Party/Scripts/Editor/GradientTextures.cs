@@ -46,6 +46,20 @@ namespace Party.EditorTools
             return Save(tex, path);
         }
 
+        /// <summary>Top-to-bottom gradient - used for the sky.</summary>
+        public static Texture2D Vertical(string name, Color top, Color bottom, int h = 256)
+        {
+            string path = $"{Dir}/{name}.png";
+            var tex = new Texture2D(4, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                Color c = Color.Lerp(bottom, top, Mathf.SmoothStep(0f, 1f, y / (float)(h - 1)));
+                for (int x = 0; x < 4; x++) tex.SetPixel(x, y, c);
+            }
+            tex.Apply();
+            return Save(tex, path);
+        }
+
         /// <summary>A soft round dot - out-of-focus light, not a hard confetti chip.</summary>
         public static Texture2D Bokeh(string name, int size = 128)
         {
@@ -139,19 +153,66 @@ namespace Party.EditorTools
         }
 
         /// <summary>Unlit, transparent, textured - for backdrops and soft particles.</summary>
+        /// <summary>
+        /// Unlit, genuinely transparent, textured.
+        ///
+        /// Setting _Surface = 1 alone does NOT make a URP material transparent - the
+        /// material editor's ShaderGUI is what rewrites the blend state, and code has to
+        /// do it by hand. Without these the quads render OPAQUE, which is exactly why the
+        /// "soft bokeh" came out as big flat white squares.
+        /// </summary>
         public static Material UnlitTex(string name, Texture2D tex, Color tint, bool additive = false)
         {
             string path = $"{Dir}/{name}.mat";
             Material m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
             m.SetTexture("_BaseMap", tex);
             m.SetColor("_BaseColor", tint);
-            m.SetFloat("_Surface", 1f);
+
+            m.SetFloat("_Surface", 1f);                       // transparent
             m.SetFloat("_Blend", additive ? 1f : 0f);
             m.SetFloat("_ZWrite", 0f);
+            m.SetFloat("_AlphaClip", 0f);
+            m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetInt("_DstBlend", additive
+                ? (int)UnityEngine.Rendering.BlendMode.One
+                : (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetInt("_ZWriteControl", 0);
             m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.DisableKeyword("_ALPHATEST_ON");
+            m.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
             AssetDatabase.CreateAsset(m, path);
             return m;
+        }
+
+        /// <summary>A real cone mesh - Unity has no cone primitive.</summary>
+        public static Mesh Cone(string name, int segments = 20)
+        {
+            var mesh = new Mesh { name = name };
+            var verts = new System.Collections.Generic.List<Vector3>();
+            var tris  = new System.Collections.Generic.List<int>();
+
+            verts.Add(new Vector3(0f, 1f, 0f));   // apex
+            for (int i = 0; i < segments; i++)
+            {
+                float a = i / (float)segments * Mathf.PI * 2f;
+                verts.Add(new Vector3(Mathf.Cos(a) * 0.5f, 0f, Mathf.Sin(a) * 0.5f));
+            }
+            verts.Add(Vector3.zero);              // base centre
+            int baseC = verts.Count - 1;
+
+            for (int i = 0; i < segments; i++)
+            {
+                int a = 1 + i, b = 1 + (i + 1) % segments;
+                tris.Add(0); tris.Add(b); tris.Add(a);        // side
+                tris.Add(baseC); tris.Add(a); tris.Add(b);    // cap
+            }
+            mesh.SetVertices(verts);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
         }
     }
 }

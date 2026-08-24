@@ -81,7 +81,7 @@ namespace Party.Character
 
             // ---- chassis ----
             GameObject chassis = Prim(PrimitiveType.Capsule, root.transform, "Chassis");
-            chassis.transform.localScale = new Vector3(0.92f, 0.58f, 0.92f);
+            chassis.transform.localScale = new Vector3(0.70f, 0.62f, 0.70f);   // slimmer
             chassis.transform.localPosition = new Vector3(0f, -0.18f, 0f);
             chassisRenderer = chassis.GetComponent<Renderer>();
             chassisRenderer.sharedMaterial = enamel;
@@ -92,26 +92,26 @@ namespace Party.Character
             for (int s = -1; s <= 1; s += 2)
             {
                 GameObject arm = Prim(PrimitiveType.Capsule, root.transform, s < 0 ? "ArmL" : "ArmR");
-                arm.transform.localPosition = new Vector3(s * 0.44f, -0.16f, 0f);
-                arm.transform.localScale = new Vector3(0.18f, 0.24f, 0.18f);
+                arm.transform.localPosition = new Vector3(s * 0.36f, -0.16f, 0f);
+                arm.transform.localScale = new Vector3(0.15f, 0.24f, 0.15f);
                 arm.transform.localRotation = Quaternion.Euler(0f, 0f, s * 16f);
                 arm.GetComponent<Renderer>().sharedMaterial = dark;
 
                 GameObject leg = Prim(PrimitiveType.Capsule, root.transform, s < 0 ? "LegL" : "LegR");
-                leg.transform.localPosition = new Vector3(s * 0.20f, -0.72f, 0f);
-                leg.transform.localScale = new Vector3(0.21f, 0.20f, 0.21f);
+                leg.transform.localPosition = new Vector3(s * 0.17f, -0.76f, 0f);
+                leg.transform.localScale = new Vector3(0.18f, 0.20f, 0.18f);
                 leg.GetComponent<Renderer>().sharedMaterial = dark;
             }
 
             // ---- collar + dome ----
             GameObject collar = Prim(PrimitiveType.Cylinder, root.transform, "Collar");
             collar.transform.localPosition = new Vector3(0f, 0.20f, 0f);
-            collar.transform.localScale = new Vector3(0.52f, 0.07f, 0.52f);
+            collar.transform.localScale = new Vector3(0.44f, 0.07f, 0.44f);
             collar.GetComponent<Renderer>().sharedMaterial = brass;
 
             GameObject dome = Prim(PrimitiveType.Sphere, root.transform, "Dome");
             dome.transform.localPosition = new Vector3(0f, 0.44f, 0f);
-            dome.transform.localScale = new Vector3(0.76f, 0.62f, 0.76f);   // WIDE, not bulb-shaped
+            dome.transform.localScale = new Vector3(0.66f, 0.58f, 0.66f);
             dome.GetComponent<Renderer>().sharedMaterial = Glass(DomeTint(cfg.dome));
 
             // ---- the filament: the whole face ----
@@ -121,9 +121,73 @@ namespace Party.Character
             rig = fil.AddComponent<FilamentRig>();
             rig.Build(Wrap(cfg.shape, ShapeNames.Length), glow);
 
+            BuildFace(root.transform);
             BuildMask(root.transform, cfg.mask, body);
             BuildAccessory(root.transform, cfg.accessory, body, brass, glow);
             return root.transform;
+        }
+
+        /// <summary>
+        /// White eyes, dark pupils and a cone nose on the front of the dome.
+        ///
+        /// The original design had no eyes at all - the filament was the whole face. The
+        /// founder's reference is a clean minimal face, so eyes and a nose go on the
+        /// outside and the filament stays inside as the glow that shows standing with the
+        /// host. The face makes it read as a character; the glow keeps the mechanic.
+        /// </summary>
+        static void BuildFace(Transform root)
+        {
+            Material white = Mat(new Color(0.99f, 0.99f, 1f), 0.55f);
+            Material pupil = Mat(new Color(0.06f, 0.06f, 0.09f), 0.6f);
+            Material nose  = Mat(new Color(0.99f, 0.72f, 0.42f), 0.35f);
+
+            for (int s = -1; s <= 1; s += 2)
+            {
+                GameObject eye = Prim(PrimitiveType.Sphere, root, s < 0 ? "EyeL" : "EyeR");
+                eye.transform.localPosition = new Vector3(s * 0.15f, 0.50f, 0.27f);
+                eye.transform.localScale = Vector3.one * 0.20f;
+                eye.GetComponent<Renderer>().sharedMaterial = white;
+
+                GameObject pu = Prim(PrimitiveType.Sphere, eye.transform, "Pupil");
+                pu.transform.localPosition = new Vector3(0f, 0f, 0.30f);
+                pu.transform.localScale = Vector3.one * 0.55f;
+                pu.GetComponent<Renderer>().sharedMaterial = pupil;
+            }
+
+            // Cone nose - Unity has no cone primitive, so the mesh is generated.
+            GameObject n = new GameObject("Nose");
+            n.transform.SetParent(root, false);
+            n.transform.localPosition = new Vector3(0f, 0.42f, 0.30f);
+            n.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // point forward
+            n.transform.localScale = new Vector3(0.14f, 0.20f, 0.14f);
+            n.AddComponent<MeshFilter>().sharedMesh = ConeMesh();
+            n.AddComponent<MeshRenderer>().sharedMaterial = nose;
+        }
+
+        static Mesh _cone;
+        static Mesh ConeMesh()
+        {
+            if (_cone != null) return _cone;
+            _cone = new Mesh { name = "NoseCone" };
+            var verts = new System.Collections.Generic.List<Vector3> { new Vector3(0f, 1f, 0f) };
+            const int seg = 18;
+            for (int i = 0; i < seg; i++)
+            {
+                float a = i / (float)seg * Mathf.PI * 2f;
+                verts.Add(new Vector3(Mathf.Cos(a) * 0.5f, 0f, Mathf.Sin(a) * 0.5f));
+            }
+            verts.Add(Vector3.zero);
+            int baseC = verts.Count - 1;
+            var tris = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < seg; i++)
+            {
+                int a = 1 + i, b = 1 + (i + 1) % seg;
+                tris.Add(0); tris.Add(b); tris.Add(a);
+                tris.Add(baseC); tris.Add(a); tris.Add(b);
+            }
+            _cone.SetVertices(verts); _cone.SetTriangles(tris, 0);
+            _cone.RecalculateNormals(); _cone.RecalculateBounds();
+            return _cone;
         }
 
         // ---------- parts ----------

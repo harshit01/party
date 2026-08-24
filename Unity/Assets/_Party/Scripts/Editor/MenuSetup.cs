@@ -21,6 +21,7 @@ namespace Party.EditorTools
     {
         const string ScenePath = "Assets/_Party/Scenes/Menu.unity";
         static Font _font;
+        static Font _display;
         static MainMenu _menu;
         static Sprite _bubble;
 
@@ -47,6 +48,10 @@ namespace Party.EditorTools
         {
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
                  ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            // Chunky display face for the logo. Arial is why the title read as a label
+            // rather than a logo. Luckiest Guy is Apache 2.0 - free for commercial use.
+            _display = AssetDatabase.LoadAssetAtPath<Font>("Assets/_Party/Art/Fonts/LuckiestGuy.ttf")
+                    ?? _font;
             _bubble = GradientTextures.Bubble("BubbleButton");
             _bubbleIndex = 0;
 
@@ -61,12 +66,8 @@ namespace Party.EditorTools
 
             BuildStage();
 
-            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            floor.name = "Floor";
-            floor.transform.localScale = Vector3.one * 5f;
-            floor.transform.position = new Vector3(0f, -1.7f, 0f);
-            floor.GetComponent<Renderer>().sharedMaterial =
-                PresentationSetup.Lit("MenuFloor", new Color(0.15f, 0.16f, 0.22f), 0.25f);
+            // No floor. The references are pure sky - a ground plane immediately
+            // reintroduces the horizon band that made the last version look boxed in.
 
             GameObject podium = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             podium.name = "Podium";
@@ -146,23 +147,41 @@ namespace Party.EditorTools
             RectTransform srt = scrim.GetComponent<RectTransform>();
             srt.anchorMin = new Vector2(1f, 0f); srt.anchorMax = new Vector2(1f, 1f);
             srt.pivot = new Vector2(1f, 0.5f);
-            srt.anchoredPosition = Vector2.zero;
-            srt.sizeDelta = new Vector2(640f, 0f);
+            srt.anchoredPosition = new Vector2(-40f, 0f);
+            srt.sizeDelta = new Vector2(560f, -140f);   // inset panel, not a full-height slab
             Image si = scrim.AddComponent<Image>();
-            si.color = new Color(0.06f, 0.05f, 0.12f, 0.72f);
+            si.sprite = _bubble;
+            si.type = Image.Type.Sliced;
+            si.pixelsPerUnitMultiplier = 0.9f;
+            si.color = new Color(0.18f, 0.42f, 0.70f, 0.42f);   // soft blue glass
             si.raycastTarget = false;
 
-            Text title = Label(canvasGo.transform, "Title", "PARTY GAME", 92, TL, new Vector2(64f, -52f),
-                               new Vector2(900f, 120f), TextAnchor.UpperLeft, Accent);
-            title.fontStyle = FontStyle.Bold;
-            var tOut = title.gameObject.AddComponent<Outline>();
-            tOut.effectColor = new Color(0.25f, 0.05f, 0.15f, 1f);
-            tOut.effectDistance = new Vector2(3f, -3f);
+            // Stacked outlines fake a thick keyline. uGUI's Outline draws four offset
+            // copies, so several at increasing distance build the chunky border the
+            // reference logos all share.
+            Text title = Label(canvasGo.transform, "Title", "PARTY GAME", 108, TL,
+                               new Vector2(58f, -44f), new Vector2(1000f, 150f),
+                               TextAnchor.UpperLeft, new Color(1f, 0.97f, 0.90f));
+            title.font = _display;
+            title.transform.localRotation = Quaternion.Euler(0f, 0f, 1.6f);   // slight tilt
+            foreach (float d in new[] { 7f, 5f, 3f })
+            {
+                var o = title.gameObject.AddComponent<Outline>();
+                o.effectColor = new Color(0.14f, 0.06f, 0.22f, 1f);
+                o.effectDistance = new Vector2(d, -d);
+                o.useGraphicAlpha = false;
+            }
             var tSh = title.gameObject.AddComponent<Shadow>();
-            tSh.effectColor = new Color(0f, 0f, 0f, 0.55f);
-            tSh.effectDistance = new Vector2(6f, -7f);
-            Label(canvasGo.transform, "Sub", "working title", 24, TL, new Vector2(70f, -150f),
-                  new Vector2(700f, 36f), TextAnchor.UpperLeft, Dim);
+            tSh.effectColor = new Color(0.55f, 0.15f, 0.35f, 0.9f);
+            tSh.effectDistance = new Vector2(0f, -12f);
+
+            Text sub = Label(canvasGo.transform, "Sub", "working title", 26, TL,
+                             new Vector2(72f, -168f), new Vector2(700f, 40f),
+                             TextAnchor.UpperLeft, new Color(1f, 1f, 1f, 0.8f));
+            sub.font = _display;
+            var sOut = sub.gameObject.AddComponent<Outline>();
+            sOut.effectColor = new Color(0.14f, 0.06f, 0.22f, 0.9f);
+            sOut.effectDistance = new Vector2(2f, -2f);
 
             _menu.homePanel        = BuildHome(canvasGo.transform);
             _menu.characterPanel   = BuildCharacter(canvasGo.transform);
@@ -191,73 +210,61 @@ namespace Party.EditorTools
             GameObject stage = new GameObject("Stage");
             MenuStage ms = stage.AddComponent<MenuStage>();
 
-            // A SOFT RADIAL GRADIENT, not wedges.
+            // BRIGHT SKY, not a dark room.
             //
-            // The first version used 18 flat sunburst quads. Hard edges alias, the quads
-            // z-fought where they overlapped, and two clashing flats read as cheap. One
-            // smooth gradient has no edges to alias and no seams to fight.
-            Texture2D grad = GradientTextures.Radial(
-                "BackdropGradient",
-                new Color(0.36f, 0.16f, 0.34f),   // warm plum centre
-                new Color(0.05f, 0.05f, 0.12f),   // deep midnight edge
-                768, 1.15f);
-            Material backMat = GradientTextures.UnlitTex("BackdropMat", grad, Color.white);
-
+            // Four references all point the same way: sunny, saturated, cheerful, with
+            // soft things drifting past. The earlier dark-plum version was the opposite
+            // of that, and a party game menu that looks like a night club reads as the
+            // wrong genre before a single word is read.
+            Texture2D sky = GradientTextures.Vertical(
+                "SkyGradient",
+                new Color(0.42f, 0.73f, 0.97f),   // sky blue at the top
+                new Color(0.86f, 0.95f, 1.00f),   // pale near the horizon
+                256);
             GameObject back = GameObject.CreatePrimitive(PrimitiveType.Quad);
             Object.DestroyImmediate(back.GetComponent<Collider>());
-            back.name = "Backdrop";
+            back.name = "Sky";
             back.transform.SetParent(stage.transform, false);
-            back.transform.position = new Vector3(0f, 0.6f, 9.5f);
-            back.transform.localScale = new Vector3(44f, 26f, 1f);
-            back.GetComponent<Renderer>().sharedMaterial = backMat;
+            back.transform.position = new Vector3(0f, 0.6f, 14f);
+            back.transform.localScale = new Vector3(110f, 62f, 1f);
+            back.GetComponent<Renderer>().sharedMaterial =
+                GradientTextures.UnlitTex("SkyMat", sky, Color.white);
 
-            // A second, larger, dimmer pass behind it adds depth without adding edges.
-            GameObject halo = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            Object.DestroyImmediate(halo.GetComponent<Collider>());
-            halo.name = "BackdropHalo";
-            halo.transform.SetParent(stage.transform, false);
-            halo.transform.position = new Vector3(0f, 0.6f, 11.5f);
-            halo.transform.localScale = new Vector3(70f, 40f, 1f);
-            halo.GetComponent<Renderer>().sharedMaterial = GradientTextures.UnlitTex(
-                "BackdropHaloMat", grad, new Color(1f, 0.85f, 0.9f, 0.5f), true);
-
-            // BOKEH, not confetti. Soft out-of-focus dots drifting, which depth of field
-            // then blurs further. Hard-edged chips are what made it look like debris.
-            Texture2D dot = GradientTextures.Bokeh("BokehDot");
+            // Soft clouds drifting across, plus a few coloured balloons for the party.
+            Texture2D puff = GradientTextures.Bokeh("CloudPuff", 256);
             ms.bokehMaterials = new[]
             {
-                GradientTextures.UnlitTex("Bokeh0", dot, new Color(1f, 0.72f, 0.55f, 0.30f), true),
-                GradientTextures.UnlitTex("Bokeh1", dot, new Color(0.70f, 0.80f, 1f, 0.26f), true),
-                GradientTextures.UnlitTex("Bokeh2", dot, new Color(1f, 0.90f, 0.75f, 0.22f), true),
+                GradientTextures.UnlitTex("Cloud0", puff, new Color(1f, 1f, 1f, 0.85f)),
+                GradientTextures.UnlitTex("Cloud1", puff, new Color(1f, 1f, 1f, 0.65f)),
+                GradientTextures.UnlitTex("Balloon0", puff, new Color(1f, 0.55f, 0.62f, 0.75f)),
+                GradientTextures.UnlitTex("Balloon1", puff, new Color(1f, 0.86f, 0.42f, 0.75f)),
+                GradientTextures.UnlitTex("Balloon2", puff, new Color(0.62f, 0.88f, 0.70f, 0.75f)),
             };
-            ms.area = new Vector3(20f, 12f, 7f);
+            ms.confettiCount = 26;
+            ms.area = new Vector3(26f, 14f, 9f);
+            ms.driftSideways = true;    // clouds cross the frame rather than falling
 
-            // Restrained lighting: one warm key, one cool fill. Three saturated spotlights
-            // fought each other and blew the chassis out.
+            // Sunny lighting: a bright warm key from high, a soft sky-blue fill.
             var lights = new List<Light>();
-            GameObject warmGo = new GameObject("Warm Spot");
-            warmGo.transform.SetParent(stage.transform, false);
-            warmGo.transform.position = new Vector3(2.6f, 3.4f, -3.4f);
-            warmGo.transform.LookAt(new Vector3(0f, -0.2f, 0f));
-            Light warmL = warmGo.AddComponent<Light>();
-            warmL.type = LightType.Spot; warmL.range = 20f; warmL.spotAngle = 52f;
-            warmL.intensity = 7f; warmL.color = new Color(1f, 0.86f, 0.72f);
-            warmL.shadows = LightShadows.Soft;
-            lights.Add(warmL);
+            GameObject sun = new GameObject("Sun");
+            sun.transform.SetParent(stage.transform, false);
+            sun.transform.rotation = Quaternion.Euler(42f, 28f, 0f);
+            Light sl = sun.AddComponent<Light>();
+            sl.type = LightType.Directional;
+            sl.intensity = 1.9f;
+            sl.color = new Color(1f, 0.96f, 0.88f);
+            sl.shadows = LightShadows.Soft;
+            lights.Add(sl);
 
-            GameObject coolGo = new GameObject("Cool Fill");
-            coolGo.transform.SetParent(stage.transform, false);
-            coolGo.transform.position = new Vector3(-3.2f, 2.4f, -2.2f);
-            coolGo.transform.LookAt(new Vector3(0f, -0.2f, 0f));
-            Light coolL = coolGo.AddComponent<Light>();
-            coolL.type = LightType.Spot; coolL.range = 18f; coolL.spotAngle = 60f;
-            coolL.intensity = 3.2f; coolL.color = new Color(0.62f, 0.74f, 1f);
-            coolL.shadows = LightShadows.None;
-            lights.Add(coolL);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor     = new Color(0.72f, 0.84f, 1.00f);
+            RenderSettings.ambientEquatorColor = new Color(0.80f, 0.86f, 0.94f);
+            RenderSettings.ambientGroundColor  = new Color(0.62f, 0.66f, 0.72f);
+            RenderSettings.fog = false;
 
             ms.pulseLights = lights.ToArray();
-            ms.pulseAmount = 0.10f;   // a breath, not a disco
-            ms.pulseSpeed = 0.7f;
+            ms.pulseAmount = 0.05f;
+            ms.pulseSpeed = 0.6f;
         }
 
         // ---------- panels ----------
@@ -435,6 +442,10 @@ namespace Party.EditorTools
             Text t = Label(go.transform, "Text", text, fontSize, new Vector2(0.5f, 0.5f),
                            Vector2.zero, size, TextAnchor.MiddleCenter, Color.white);
             Place(t.gameObject, new Vector2(0.5f, 0.5f), Vector2.zero, size);
+            t.font = _display;
+            var bo = t.gameObject.AddComponent<Outline>();
+            bo.effectColor = new Color(0.12f, 0.06f, 0.18f, 0.85f);
+            bo.effectDistance = new Vector2(2f, -2f);
             go.AddComponent<ButtonFeel>();
             return b;
         }
