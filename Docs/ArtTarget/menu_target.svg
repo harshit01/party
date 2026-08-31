@@ -1,0 +1,198 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#0e4fb8"/><stop offset="38%" stop-color="#3d90e0"/>
+    <stop offset="70%" stop-color="#8fc9ee"/><stop offset="100%" stop-color="#ffe0b0"/>
+  </linearGradient>
+  <linearGradient id="arenaFloor" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#7b8fb5"/><stop offset="100%" stop-color="#4d5d80"/>
+  </linearGradient>
+  <linearGradient id="lane" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#9fb4d6"/><stop offset="100%" stop-color="#6d80a6"/>
+  </linearGradient>
+  <linearGradient id="stand" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#3f4f74"/><stop offset="100%" stop-color="#2a3555"/>
+  </linearGradient>
+  <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ff87ad"/><stop offset="100%" stop-color="#dd2f68"/>
+  </linearGradient>
+  <linearGradient id="head" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#dbe2f0"/>
+  </linearGradient>
+  <linearGradient id="panelG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#122f5c" stop-opacity="0.74"/>
+    <stop offset="100%" stop-color="#081a3a" stop-opacity="0.82"/>
+  </linearGradient>
+  <linearGradient id="bPlay" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff4d7d"/><stop offset="100%" stop-color="#d4114f"/></linearGradient>
+  <linearGradient id="b1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#45b6f7"/><stop offset="100%" stop-color="#0f74d4"/></linearGradient>
+  <linearGradient id="b2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9070f2"/><stop offset="100%" stop-color="#5732cc"/></linearGradient>
+  <linearGradient id="b3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#33dbab"/><stop offset="100%" stop-color="#08a077"/></linearGradient>
+  <linearGradient id="b4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffab42"/><stop offset="100%" stop-color="#e07207"/></linearGradient>
+  <linearGradient id="b5" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#616880"/><stop offset="100%" stop-color="#343a4c"/></linearGradient>
+  <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#fff4d4" stop-opacity="0.75"/><stop offset="100%" stop-color="#fff4d4" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="spotG" cx="50%" cy="0%" r="72%">
+    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/><stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="22"/></filter>
+  <filter id="blur6"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="drop"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#06213f" flood-opacity="0.5"/></filter>
+</defs>
+
+<rect width="1920" height="1080" fill="url(#sky)"/>
+
+<!-- ================= ARENA: a real place, clearly readable ================= -->
+<g filter="url(#blur6)">
+  <!-- audience stands, left and right, tiered -->
+  <g>
+    <path d="M -20 640 L 470 512 L 470 700 L -20 760 Z" fill="url(#stand)"/>
+    <path d="M 1500 512 L 1940 640 L 1940 760 L 1500 700 Z" fill="url(#stand)"/>
+  </g>
+  <!-- crowd dots -->
+  <g>
+    <g fill="#ff7f9c"><circle cx="60" cy="646" r="9"/><circle cx="150" cy="622" r="9"/><circle cx="300" cy="586" r="9"/><circle cx="410" cy="560" r="9"/></g>
+    <g fill="#6cc7f5"><circle cx="105" cy="662" r="9"/><circle cx="215" cy="632" r="9"/><circle cx="355" cy="596" r="9"/></g>
+    <g fill="#7fe3b4"><circle cx="60" cy="686" r="9"/><circle cx="255" cy="612" r="9"/><circle cx="430" cy="576" r="9"/></g>
+    <g fill="#ffd75e"><circle cx="180" cy="676" r="9"/><circle cx="330" cy="632" r="9"/></g>
+    <g fill="#ff7f9c"><circle cx="1560" cy="536" r="9"/><circle cx="1700" cy="574" r="9"/><circle cx="1850" cy="616" r="9"/></g>
+    <g fill="#6cc7f5"><circle cx="1620" cy="560" r="9"/><circle cx="1770" cy="600" r="9"/><circle cx="1900" cy="640" r="9"/></g>
+    <g fill="#7fe3b4"><circle cx="1680" cy="546" r="9"/><circle cx="1830" cy="588" r="9"/></g>
+  </g>
+
+  <!-- arena floor -->
+  <path d="M -20 760 L 470 690 L 1500 690 L 1940 760 L 1940 1080 L -20 1080 Z" fill="url(#arenaFloor)"/>
+
+  <!-- the Red Light lane running back to the finish -->
+  <path d="M 620 690 L 1330 690 L 1560 1080 L 380 1080 Z" fill="url(#lane)"/>
+  <path d="M 700 720 L 1252 720 L 1268 748 L 684 748 Z" fill="#e9eef7" opacity="0.75"/>
+
+  <!-- FINISH GANTRY with a banner -->
+  <rect x="612" y="556" width="26" height="140" rx="6" fill="#f0c95c"/>
+  <rect x="1316" y="556" width="26" height="140" rx="6" fill="#f0c95c"/>
+  <rect x="600" y="530" width="756" height="40" rx="10" fill="#ffd76b"/>
+  <rect x="640" y="576" width="676" height="34" rx="8" fill="#26365e" opacity="0.85"/>
+
+  <!-- hazards on the lane: sweeper bar, piston blocks, slalom pillars -->
+  <rect x="742" y="792" width="470" height="20" rx="8" fill="#e8555f"/>
+  <circle cx="977" cy="802" r="18" fill="#cfd8e8"/>
+  <rect x="560" y="880" width="150" height="60" rx="12" fill="#e8555f"/>
+  <rect x="1244" y="880" width="150" height="60" rx="12" fill="#e8555f"/>
+  <ellipse cx="838" cy="900" rx="34" ry="16" fill="#e2e8f2"/><rect x="804" y="850" width="68" height="52" fill="#e2e8f2"/>
+  <ellipse cx="1116" cy="900" rx="34" ry="16" fill="#e2e8f2"/><rect x="1082" y="850" width="68" height="52" fill="#e2e8f2"/>
+
+  <!-- other contestants ON the lane, clearly visible -->
+  <g transform="translate(700,742) scale(0.46)">
+    <ellipse cx="0" cy="0" rx="54" ry="62" fill="#4aa8e8"/><circle cx="0" cy="-60" r="48" fill="#f2f6fc"/>
+    <circle cx="-16" cy="-62" r="9" fill="#141b2c"/><circle cx="16" cy="-62" r="9" fill="#141b2c"/><polygon points="0,-50 -10,-32 10,-32" fill="#f5a63a"/>
+  </g>
+  <g transform="translate(1230,748) scale(0.44)">
+    <ellipse cx="0" cy="0" rx="54" ry="62" fill="#5fdca6"/><circle cx="0" cy="-60" r="48" fill="#f2f6fc"/>
+    <circle cx="-16" cy="-62" r="9" fill="#141b2c"/><circle cx="16" cy="-62" r="9" fill="#141b2c"/><polygon points="0,-50 -10,-32 10,-32" fill="#f5a63a"/>
+  </g>
+  <g transform="translate(960,726) scale(0.40)">
+    <ellipse cx="0" cy="0" rx="54" ry="62" fill="#f2c455"/><circle cx="0" cy="-60" r="48" fill="#f2f6fc"/>
+    <circle cx="-16" cy="-62" r="9" fill="#141b2c"/><circle cx="16" cy="-62" r="9" fill="#141b2c"/><polygon points="0,-50 -10,-32 10,-32" fill="#f5a63a"/>
+  </g>
+
+  <!-- lighting truss with spot cones -->
+  <rect x="440" y="300" width="1060" height="22" rx="8" fill="#2c3550"/>
+  <g fill="#22293f"><rect x="560" y="322" width="34" height="30" rx="6"/><rect x="880" y="322" width="34" height="30" rx="6"/><rect x="1220" y="322" width="34" height="30" rx="6"/></g>
+</g>
+
+<!-- spot cones (crisp, in front of the blur) -->
+<g opacity="0.5">
+  <polygon points="577,352 380,900 774,900" fill="url(#spotG)"/>
+  <polygon points="897,352 700,900 1094,900" fill="url(#spotG)"/>
+  <polygon points="1237,352 1040,900 1434,900" fill="url(#spotG)"/>
+</g>
+
+<!-- BUNTING: fully in frame -->
+<path d="M -30 196 Q 500 314 1030 200 Q 1500 104 1960 212" stroke="#ffffff" stroke-opacity="0.65" stroke-width="4" fill="none"/>
+<g>
+  <polygon points="70,212 108,212 89,268"/><polygon points="196,248 234,248 215,304"/>
+  <polygon points="322,274 360,274 341,330"/><polygon points="448,292 486,292 467,348"/>
+  <polygon points="574,302 612,302 593,358"/><polygon points="700,302 738,302 719,358"/>
+  <polygon points="826,290 864,290 845,346"/><polygon points="952,266 990,266 971,322"/>
+  <polygon points="1078,230 1116,230 1097,286"/><polygon points="1204,192 1242,192 1223,248"/>
+  <polygon points="1330,162 1368,162 1349,218"/><polygon points="1456,142 1494,142 1475,198"/>
+  <polygon points="1582,138 1620,138 1601,194"/><polygon points="1708,152 1746,152 1727,208"/>
+  <polygon points="1834,178 1872,178 1853,234"/>
+</g>
+<g>
+  <polygon points="70,212 108,212 89,268" fill="#ff5f7e"/><polygon points="196,248 234,248 215,304" fill="#3fb0f5"/>
+  <polygon points="322,274 360,274 341,330" fill="#5fe0a0"/><polygon points="448,292 486,292 467,348" fill="#ffd23d"/>
+  <polygon points="574,302 612,302 593,358" fill="#b07bf0"/><polygon points="700,302 738,302 719,358" fill="#ff8f4d"/>
+  <polygon points="826,290 864,290 845,346" fill="#ff5f7e"/><polygon points="952,266 990,266 971,322" fill="#3fb0f5"/>
+  <polygon points="1078,230 1116,230 1097,286" fill="#5fe0a0"/><polygon points="1204,192 1242,192 1223,248" fill="#ffd23d"/>
+  <polygon points="1330,162 1368,162 1349,218" fill="#b07bf0"/><polygon points="1456,142 1494,142 1475,198" fill="#ff8f4d"/>
+  <polygon points="1582,138 1620,138 1601,194" fill="#ff5f7e"/><polygon points="1708,152 1746,152 1727,208" fill="#3fb0f5"/>
+  <polygon points="1834,178 1872,178 1853,234" fill="#5fe0a0"/>
+</g>
+
+<!-- confetti -->
+<g opacity="0.9">
+  <rect x="300" y="360" width="14" height="20" rx="3" fill="#ff5f7e" transform="rotate(24 307 370)"/>
+  <rect x="520" y="420" width="12" height="18" rx="3" fill="#ffd23d" transform="rotate(-32 526 429)"/>
+  <rect x="1180" y="330" width="13" height="19" rx="3" fill="#5fe0a0" transform="rotate(48 1186 339)"/>
+  <rect x="1420" y="450" width="12" height="18" rx="3" fill="#3fb0f5" transform="rotate(-18 1426 459)"/>
+  <rect x="210" y="560" width="12" height="18" rx="3" fill="#b07bf0" transform="rotate(62 216 569)"/>
+</g>
+
+<!-- hero glow -->
+<ellipse cx="700" cy="640" rx="480" ry="430" fill="url(#heroGlow)"/>
+
+<!-- ================= HERO ================= -->
+<ellipse cx="700" cy="1002" rx="250" ry="46" fill="#0d2444" opacity="0.36" filter="url(#soft)"/>
+<ellipse cx="700" cy="960" rx="232" ry="58" fill="#ffd45e" opacity="0.55" filter="url(#soft)"/>
+<ellipse cx="700" cy="948" rx="198" ry="50" fill="#f2679c"/>
+<rect x="502" y="906" width="396" height="44" fill="#ec5a91"/>
+<ellipse cx="700" cy="906" rx="198" ry="50" fill="#ff9fc4"/>
+
+<g filter="url(#drop)">
+  <ellipse cx="628" cy="838" rx="34" ry="24" fill="#a52a52"/>
+  <ellipse cx="772" cy="838" rx="34" ry="24" fill="#a52a52"/>
+  <path d="M 582 520 Q 582 450 700 450 Q 818 450 818 520 L 818 792 Q 818 856 700 856 Q 582 856 582 792 Z" fill="url(#body)"/>
+  <ellipse cx="566" cy="672" rx="40" ry="88" fill="#c23a68" transform="rotate(-12 566 672)"/>
+  <ellipse cx="834" cy="672" rx="40" ry="88" fill="#c23a68" transform="rotate(12 834 672)"/>
+  <ellipse cx="700" cy="442" rx="162" ry="148" fill="url(#head)"/>
+  <ellipse cx="642" cy="424" rx="40" ry="42" fill="#ffffff"/>
+  <ellipse cx="758" cy="424" rx="40" ry="42" fill="#ffffff"/>
+  <circle cx="648" cy="430" r="21" fill="#141824"/><circle cx="764" cy="430" r="21" fill="#141824"/>
+  <circle cx="655" cy="422" r="7" fill="#ffffff" opacity="0.9"/><circle cx="771" cy="422" r="7" fill="#ffffff" opacity="0.9"/>
+  <polygon points="700,454 676,498 724,498" fill="#f7a83c"/>
+  <ellipse cx="644" cy="382" rx="68" ry="38" fill="#ffffff" opacity="0.5"/>
+</g>
+
+<!-- LOGO -->
+<g transform="translate(66,66) rotate(-1.6)">
+  <text x="6" y="96" font-family="Impact, sans-serif" font-size="104" fill="#2b0f3d" stroke="#2b0f3d" stroke-width="26" stroke-linejoin="round">PARTY GAME</text>
+  <text x="6" y="96" font-family="Impact, sans-serif" font-size="104" fill="#fff6e8">PARTY GAME</text>
+  <text x="10" y="138" font-family="Impact, sans-serif" font-size="28" fill="#2b0f3d" stroke="#2b0f3d" stroke-width="8" stroke-linejoin="round">WORKING TITLE</text>
+  <text x="10" y="138" font-family="Impact, sans-serif" font-size="28" fill="#ffd9f0">WORKING TITLE</text>
+</g>
+
+<!-- MENU -->
+<rect x="1408" y="150" width="452" height="790" rx="46" fill="url(#panelG)" stroke="#ffffff" stroke-opacity="0.24" stroke-width="3"/>
+<g filter="url(#drop)">
+  <rect x="1442" y="196" width="384" height="104" rx="34" fill="url(#bPlay)"/>
+  <rect x="1442" y="326" width="384" height="82" rx="28" fill="url(#b1)"/>
+  <rect x="1442" y="424" width="384" height="82" rx="28" fill="url(#b2)"/>
+  <rect x="1442" y="522" width="384" height="82" rx="28" fill="url(#b3)"/>
+  <rect x="1442" y="620" width="384" height="82" rx="28" fill="url(#b4)"/>
+  <rect x="1442" y="718" width="384" height="82" rx="28" fill="url(#b5)"/>
+</g>
+<g fill="#ffffff" opacity="0.20">
+  <rect x="1458" y="208" width="352" height="34" rx="17"/><rect x="1458" y="336" width="352" height="26" rx="13"/>
+  <rect x="1458" y="434" width="352" height="26" rx="13"/><rect x="1458" y="532" width="352" height="26" rx="13"/>
+  <rect x="1458" y="630" width="352" height="26" rx="13"/><rect x="1458" y="728" width="352" height="26" rx="13"/>
+</g>
+<g font-family="Impact, sans-serif" text-anchor="middle" fill="#ffffff">
+  <text x="1634" y="266" font-size="52" stroke="#22103a" stroke-width="7" stroke-linejoin="round">PLAY</text><text x="1634" y="266" font-size="52">PLAY</text>
+  <text x="1634" y="378" font-size="32" stroke="#22103a" stroke-width="6" stroke-linejoin="round">CHARACTER</text><text x="1634" y="378" font-size="32">CHARACTER</text>
+  <text x="1634" y="476" font-size="32" stroke="#22103a" stroke-width="6" stroke-linejoin="round">MULTIPLAYER</text><text x="1634" y="476" font-size="32">MULTIPLAYER</text>
+  <text x="1634" y="574" font-size="32" stroke="#22103a" stroke-width="6" stroke-linejoin="round">SETTINGS</text><text x="1634" y="574" font-size="32">SETTINGS</text>
+  <text x="1634" y="672" font-size="32" stroke="#22103a" stroke-width="6" stroke-linejoin="round">CONTROLS</text><text x="1634" y="672" font-size="32">CONTROLS</text>
+  <text x="1634" y="770" font-size="32" stroke="#22103a" stroke-width="6" stroke-linejoin="round">QUIT</text><text x="1634" y="770" font-size="32">QUIT</text>
+</g>
+</svg>

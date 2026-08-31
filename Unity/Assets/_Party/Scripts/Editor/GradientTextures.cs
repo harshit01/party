@@ -161,27 +161,29 @@ namespace Party.EditorTools
         /// do it by hand. Without these the quads render OPAQUE, which is exactly why the
         /// "soft bokeh" came out as big flat white squares.
         /// </summary>
+        /// <summary>
+        /// Unlit and transparent, via Sprites/Default.
+        ///
+        /// Three attempts at making URP/Unlit transparent from code all failed: setting
+        /// _Surface alone does nothing (the material editor's ShaderGUI rewrites the blend
+        /// state), and even setting _SrcBlend/_DstBlend by hand left m_ShaderKeywords
+        /// empty, so the quads rendered as solid squares. Sprites/Default is transparent
+        /// and unlit BY DESIGN - no keywords to get wrong, no blend state to configure.
+        /// </summary>
         public static Material UnlitTex(string name, Texture2D tex, Color tint, bool additive = false)
         {
             string path = $"{Dir}/{name}.mat";
-            Material m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-            m.SetTexture("_BaseMap", tex);
-            m.SetColor("_BaseColor", tint);
+            AssetDatabase.DeleteAsset(path);          // never inherit a stale asset
 
-            m.SetFloat("_Surface", 1f);                       // transparent
-            m.SetFloat("_Blend", additive ? 1f : 0f);
-            m.SetFloat("_ZWrite", 0f);
-            m.SetFloat("_AlphaClip", 0f);
-            m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            m.SetInt("_DstBlend", additive
-                ? (int)UnityEngine.Rendering.BlendMode.One
-                : (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            m.SetInt("_ZWriteControl", 0);
-            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            m.DisableKeyword("_ALPHATEST_ON");
-            m.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            Material m = new Material(Shader.Find("Sprites/Default"));
+            m.SetTexture("_MainTex", tex);
+            m.SetColor("_Color", tint);
+            if (additive)
+            {
+                m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+            }
             m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-
             AssetDatabase.CreateAsset(m, path);
             return m;
         }
