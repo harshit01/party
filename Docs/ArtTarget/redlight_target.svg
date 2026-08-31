@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Luckiest Guy','Arial Rounded MT Bold',Arial,sans-serif">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#0b2f6e"/><stop offset="45%" stop-color="#2f6fb8"/>
+    <stop offset="80%" stop-color="#7fb2dd"/><stop offset="100%" stop-color="#cfe2f2"/>
+  </linearGradient>
+  <linearGradient id="laneG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#5b6d92"/><stop offset="55%" stop-color="#7d8fb4"/>
+    <stop offset="100%" stop-color="#94a6c9"/>
+  </linearGradient>
+  <linearGradient id="crowdG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#4a5878"/><stop offset="100%" stop-color="#2b3450"/>
+  </linearGradient>
+  <linearGradient id="bodyG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ff6f9c"/><stop offset="100%" stop-color="#c8154d"/>
+  </linearGradient>
+  <linearGradient id="domeG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+    <stop offset="100%" stop-color="#bcd4ec" stop-opacity="0.55"/>
+  </linearGradient>
+  <linearGradient id="lowerThird" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#07162f" stop-opacity="0.92"/>
+    <stop offset="70%" stop-color="#0d2748" stop-opacity="0.80"/>
+    <stop offset="100%" stop-color="#0d2748" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="filGlow" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#ffe9a8" stop-opacity="0.95"/>
+    <stop offset="60%" stop-color="#ffc94d" stop-opacity="0.35"/>
+    <stop offset="100%" stop-color="#ffc94d" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="vignette" cx="50%" cy="48%" r="72%">
+    <stop offset="55%" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#020b1c" stop-opacity="0.72"/>
+  </radialGradient>
+  <linearGradient id="meterG" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#ff5a5a"/><stop offset="50%" stop-color="#ffd257"/>
+    <stop offset="100%" stop-color="#5cf0a8"/>
+  </linearGradient>
+  <filter id="crowdBlur"><feGaussianBlur stdDeviation="9"/></filter>
+  <filter id="farBlur"><feGaussianBlur stdDeviation="3"/></filter>
+  <filter id="glowSoft"><feGaussianBlur stdDeviation="16"/></filter>
+  <filter id="dropBig"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#04101f" flood-opacity="0.65"/></filter>
+  <filter id="dropTxt"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#04101f" flood-opacity="0.85"/></filter>
+</defs>
+
+<!-- ================= WORLD ================= -->
+<rect width="1920" height="1080" fill="url(#sky)"/>
+
+<!-- crowd: pushed BACK. desaturated, blurred, darker than the characters, so the eye
+     lands on the players. In the current build the crowd is brighter and busier than
+     the cast, which is why nothing reads. -->
+<g filter="url(#crowdBlur)" opacity="0.85">
+  <rect x="0" y="300" width="470" height="330" fill="url(#crowdG)"/>
+  <rect x="1450" y="300" width="470" height="330" fill="url(#crowdG)"/>
+  <g fill="#5d6d92" opacity="0.75">
+    <circle cx="60" cy="360" r="17"/><circle cx="130" cy="345" r="17"/><circle cx="205" cy="362" r="17"/>
+    <circle cx="280" cy="344" r="17"/><circle cx="350" cy="363" r="17"/><circle cx="420" cy="349" r="17"/>
+    <circle cx="95" cy="425" r="17"/><circle cx="170" cy="410" r="17"/><circle cx="245" cy="428" r="17"/>
+    <circle cx="318" cy="412" r="17"/><circle cx="392" cy="427" r="17"/>
+    <circle cx="1500" cy="358" r="17"/><circle cx="1572" cy="344" r="17"/><circle cx="1645" cy="361" r="17"/>
+    <circle cx="1718" cy="345" r="17"/><circle cx="1790" cy="362" r="17"/><circle cx="1862" cy="348" r="17"/>
+    <circle cx="1536" cy="424" r="17"/><circle cx="1610" cy="410" r="17"/><circle cx="1684" cy="427" r="17"/>
+    <circle cx="1757" cy="411" r="17"/><circle cx="1830" cy="426" r="17"/>
+  </g>
+</g>
+
+<!-- the lane, seen from LOW and CLOSE. vanishing point high and small, foreground wide -->
+<path d="M 690 420 L 1230 420 L 1920 1080 L 0 1080 Z" fill="url(#laneG)"/>
+<path d="M 690 420 L 1230 420 L 1250 470 L 670 470 Z" fill="#48587c" opacity="0.5"/>
+<!-- lane edge kerbs -->
+<path d="M 690 420 L 700 420 L 40 1080 L 0 1080 Z" fill="#cdd7e8" opacity="0.85"/>
+<path d="M 1220 420 L 1230 420 L 1920 1080 L 1880 1080 Z" fill="#cdd7e8" opacity="0.85"/>
+<!-- distance chevrons up the lane -->
+<g fill="#ffffff" opacity="0.10">
+  <path d="M 900 470 L 1020 470 L 1030 500 L 890 500 Z"/>
+  <path d="M 870 560 L 1050 560 L 1065 605 L 855 605 Z"/>
+  <path d="M 830 690 L 1090 690 L 1112 755 L 808 755 Z"/>
+</g>
+
+<!-- FINISH GATE, small and far: the goal is visible but distant -->
+<g filter="url(#farBlur)" opacity="0.9">
+  <rect x="800" y="352" width="14" height="72" fill="#ffd257"/>
+  <rect x="1106" y="352" width="14" height="72" fill="#ffd257"/>
+  <rect x="800" y="352" width="320" height="16" fill="#ffd257"/>
+</g>
+
+<!-- ============ RIVALS: small, far, ANONYMOUS. no name tags, no roster ============ -->
+<g filter="url(#farBlur)">
+  <g opacity="0.95">
+    <rect x="861" y="452" width="26" height="38" rx="13" fill="#3fb0f0"/>
+    <ellipse cx="874" cy="450" rx="17" ry="13" fill="#dbe8f6" opacity="0.9"/>
+  </g>
+  <g opacity="0.95">
+    <rect x="1010" y="462" width="29" height="43" rx="14" fill="#ffab42"/>
+    <ellipse cx="1024" cy="459" rx="19" ry="14" fill="#dbe8f6" opacity="0.9"/>
+  </g>
+  <g opacity="0.55">
+    <rect x="944" y="444" width="23" height="34" rx="11" fill="#6d7690"/>
+    <ellipse cx="955" cy="442" rx="15" ry="11" fill="#aeb8cc" opacity="0.8"/>
+    <text x="955" y="432" font-size="20" fill="#ff7b7b" text-anchor="middle">OUT</text>
+  </g>
+</g>
+
+<!-- ================= HERO: YOUR FILAMENT, BIG ================= -->
+<!-- ~46% of frame height. In the current build a character is about 6%. -->
+<g filter="url(#dropBig)">
+  <ellipse cx="742" cy="1012" rx="150" ry="30" fill="#0b1c33" opacity="0.42"/>
+  <!-- legs -->
+  <rect x="690" y="905" width="34" height="86" rx="17" fill="#8e1038"/>
+  <rect x="762" y="905" width="34" height="86" rx="17" fill="#8e1038"/>
+  <!-- body -->
+  <rect x="644" y="590" width="196" height="360" rx="98" fill="url(#bodyG)"/>
+  <!-- arms -->
+  <rect x="600" y="640" width="46" height="196" rx="23" fill="#e2447a"/>
+  <rect x="838" y="640" width="46" height="196" rx="23" fill="#e2447a"/>
+  <!-- dome head -->
+  <circle cx="742" cy="600" r="128" fill="url(#filGlow)" opacity="0.85"/>
+  <path d="M 614 604 A 128 128 0 0 1 870 604 Z" fill="url(#domeG)"/>
+  <ellipse cx="742" cy="604" rx="128" ry="20" fill="#e8f1fb" opacity="0.75"/>
+  <!-- the glowing wire inside the dome: standing with Barnaby, made physical -->
+  <g filter="url(#glowSoft)" opacity="0.95">
+    <path d="M 690 566 q 26 -46 52 0 q 26 46 52 -14" stroke="#ffd257" stroke-width="16" fill="none" stroke-linecap="round"/>
+  </g>
+  <path d="M 690 566 q 26 -46 52 0 q 26 46 52 -14" stroke="#fff3c4" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <!-- eyes + cone nose -->
+  <circle cx="706" cy="556" r="21" fill="#ffffff"/><circle cx="778" cy="556" r="21" fill="#ffffff"/>
+  <circle cx="710" cy="559" r="9" fill="#16203a"/><circle cx="782" cy="559" r="9" fill="#16203a"/>
+  <path d="M 742 566 L 762 596 L 722 596 Z" fill="#ffb35c"/>
+</g>
+
+<rect width="1920" height="1080" fill="url(#vignette)"/>
+
+<!-- ================= UI ================= -->
+<!-- THE CALL. Readable from across a room, which is the only way a party game is read. -->
+<text x="960" y="212" font-size="188" fill="#ff3b3b" text-anchor="middle" filter="url(#dropTxt)"
+      letter-spacing="10">STOP</text>
+<text x="960" y="272" font-size="44" fill="#ffe9a8" text-anchor="middle" filter="url(#dropTxt)">Freeze, Priya. I am watching you specifically.</text>
+
+<!-- YOUR standing, bottom left. Your own state only - nobody else's. -->
+<g filter="url(#dropTxt)">
+  <rect x="56" y="836" width="392" height="128" rx="26" fill="#07162f" opacity="0.72"/>
+  <text x="88" y="890" font-size="38" fill="#ffffff">YOU</text>
+  <text x="416" y="890" font-size="30" fill="#9fb6d4" text-anchor="end">3rd of 5</text>
+  <text x="88" y="930" font-size="24" fill="#9fb6d4">BARNABY LIKES YOU</text>
+  <rect x="88" y="940" width="328" height="14" rx="7" fill="#12294a"/>
+  <rect x="88" y="940" width="232" height="14" rx="7" fill="url(#meterG)"/>
+</g>
+
+<!-- how many are left. A COUNT, not a list of names. -->
+<g filter="url(#dropTxt)">
+  <text x="1864" y="118" font-size="34" fill="#9fb6d4" text-anchor="end">STILL IN</text>
+  <text x="1864" y="188" font-size="76" fill="#ffffff" text-anchor="end">4</text>
+  <g>
+    <circle cx="1700" cy="228" r="15" fill="#5cf0a8"/><circle cx="1742" cy="228" r="15" fill="#5cf0a8"/>
+    <circle cx="1784" cy="228" r="15" fill="#5cf0a8"/><circle cx="1826" cy="228" r="15" fill="#5cf0a8"/>
+    <circle cx="1868" cy="228" r="15" fill="#404d6b"/>
+  </g>
+</g>
+
+<!-- BARNABY, as a broadcast lower-third. He is the differentiator; he gets real estate. -->
+<g>
+  <rect x="0" y="984" width="1500" height="96" fill="url(#lowerThird)"/>
+  <circle cx="86" cy="1032" r="34" fill="#ffd257"/>
+  <text x="86" y="1045" font-size="34" fill="#3a2a00" text-anchor="middle">B</text>
+  <text x="142" y="1022" font-size="22" fill="#ffd257" letter-spacing="3">BARNABY QUILL</text>
+  <text x="142" y="1060" font-size="30" fill="#ffffff">“I saw that. I did not, but I said it, and that is what counts.”</text>
+</g>
+</svg>
