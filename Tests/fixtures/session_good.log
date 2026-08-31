@@ -1,0 +1,14 @@
+[AutoRun] beginning round 1/3
+[RedLight] SPARED Priya (standing=pet)
+[RedLight] Ravi out (framed, standing=grudge)
+[RedLight] ROUND 1 END outcome=winner:Priya stops=7 eliminated=1 spared=1 framed=1
+[RedLight] STANDINGS round=1 | Priya=0.700(pet) | Ravi=-0.500(grudge) | Tom=0.100(neutral)
+[AutoRun] beginning round 2/3
+[RedLight] Tom out (moved, standing=neutral)
+[RedLight] ROUND 2 END outcome=timeout:Priya stops=6 eliminated=1 spared=0 framed=0
+[RedLight] STANDINGS round=2 | Priya=0.480(tolerated) | Ravi=-0.315(neutral) | Tom=-0.010(neutral)
+[AutoRun] beginning round 3/3
+[RedLight] SPARED Tom (standing=tolerated)
+[RedLight] Priya out (moved, standing=tolerated)
+[RedLight] ROUND 3 END outcome=timeout:Tom stops=8 eliminated=1 spared=1 framed=0
+[RedLight] STANDINGS round=3 | Priya=0.332(tolerated) | Ravi=-0.284(neutral) | Tom=-0.159(neutral)

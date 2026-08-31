@@ -84,3 +84,6 @@ secrets.json
 .AppleDouble
 .LSOverride
 ._*
+
+# Mono crash dumps from the intermittently-corrupt player builds (see HANDOFF KNOWN ISSUE)
+mono_crash.*.json

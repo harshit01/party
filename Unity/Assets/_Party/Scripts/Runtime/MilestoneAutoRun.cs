@@ -25,6 +25,16 @@ namespace Party
         float   _nextReport;
         float   _quitAt = -1f;
 
+        // Multi-round support. BeginRound used to fire exactly once, which meant no test
+        // could ever reach BarnabyBias's central claim - that affinity PERSISTS, so "he
+        // remembers who annoyed him three rounds ago" is literally true. One round per
+        // process also re-seeds the bias every time, so spare/frame rates could only ever
+        // be sampled one round at a time.
+        bool  _roundMode;
+        int   _roundsWanted = 1;
+        int   _roundsDone;
+        float _nextRoundAt = -1f;
+
         static string Arg(string name, string fallback = null)
         {
             string[] a = System.Environment.GetCommandLineArgs();
@@ -63,7 +73,14 @@ namespace Party
             switch (_role)
             {
                 case "host":   Debug.Log("[AutoRun] starting HOST");   _nm.StartHost();
-                               if (Arg("-partyround") != null) Invoke(nameof(BeginRound), 2f);
+                               if (Arg("-partyround") != null)
+                               {
+                                   _roundMode = true;
+                                   string n = Arg("-partyrounds");
+                                   if (!string.IsNullOrEmpty(n) && int.TryParse(n, out int rn))
+                                       _roundsWanted = Mathf.Clamp(rn, 1, 50);
+                                   Invoke(nameof(BeginRound), 2f);
+                               }
                                break;
                 case "server": Debug.Log("[AutoRun] starting SERVER"); _nm.StartServer(); break;
                 case "client": Debug.Log("[AutoRun] starting CLIENT to " + _nm.networkAddress);
@@ -74,6 +91,22 @@ namespace Party
 
         void Update()
         {
+            // THE QUIT TIMER IS CHECKED FIRST, BEFORE THE ROLE GUARD.
+            // It used to sit below `if (_role == "none") return;`, which made
+            // -partyseconds silently unreachable for the one role that needs it most:
+            // build_verified.sh smoke-tests every build with `-partyrole none
+            // -partyseconds 6`, so a player that booted CORRECTLY never quit and the
+            // build script blocked forever. Only a CORRUPT build ended the smoke test,
+            // by crashing - so the tool could report failure but never success. One
+            // smoke process was found still alive after 1h37m of a 6-second run.
+            if (_quitAt > 0f && Time.time >= _quitAt)
+            {
+                Debug.Log("[AutoRun] duration elapsed, quitting");
+                if (_nm != null) { _nm.StopHost(); _nm.StopClient(); }
+                Application.Quit();
+                return;
+            }
+
             if (_role == "none") return;
 
             if (Time.time >= _nextReport)
@@ -89,12 +122,7 @@ namespace Party
                 Debug.Log($"[AutoRun] screenshot -> {_shotPath}");
             }
 
-            if (_quitAt > 0f && Time.time >= _quitAt)
-            {
-                Debug.Log("[AutoRun] duration elapsed, quitting");
-                _nm.StopHost(); _nm.StopClient();
-                Application.Quit();
-            }
+            if (_roundMode) PumpRounds();
         }
 
         /// <summary>Kick off a Red Light round from the command line, for headless testing.</summary>
@@ -102,8 +130,39 @@ namespace Party
         {
             var d = RedLight.RedLightDirector.Instance;
             if (d == null) { Debug.LogError("[AutoRun] -partyround but no RedLightDirector in scene"); return; }
-            Debug.Log("[AutoRun] beginning round");
+            _roundsDone++;
+            _nextRoundAt = -1f;
+            Debug.Log($"[AutoRun] beginning round {_roundsDone}/{_roundsWanted}");
             d.BeginRound();
+        }
+
+        /// <summary>
+        /// Chain rounds back to back so one process plays a SESSION, not a single round.
+        ///
+        /// The gap matters: the director fires PrefetchFinale the instant a round ends and
+        /// the next BeginRound wipes the verdict, so restarting immediately would cut the
+        /// finale off mid-flight and hide whether it ever completed.
+        /// </summary>
+        void PumpRounds()
+        {
+            var d = RedLight.RedLightDirector.Instance;
+            if (d == null) return;
+            if (d.phase != RedLight.RoundPhase.Finished) return;
+
+            if (_roundsDone >= _roundsWanted)
+            {
+                // Session over. Leave a beat for the last finale, then stop.
+                if (_nextRoundAt < 0f) _nextRoundAt = Time.time + 3f;
+                if (Time.time >= _nextRoundAt)
+                {
+                    Debug.Log($"[AutoRun] session complete: {_roundsDone} round(s)");
+                    _quitAt = 0.0001f;   // fall through to the quit path below next frame
+                }
+                return;
+            }
+
+            if (_nextRoundAt < 0f) _nextRoundAt = Time.time + 3f;
+            if (Time.time >= _nextRoundAt) BeginRound();
         }
 
         void Report()

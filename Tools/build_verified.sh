@@ -49,10 +49,36 @@ for attempt in $(seq 1 $MAX); do
   if [ -z "$APP" ]; then echo "  attempt $attempt: no player produced"; continue; fi
 
   # Smoke test: boot it briefly and see whether the scene actually loads.
+  #
+  # HARD DEADLINE. This used to be a bare foreground call trusting -partyseconds to end
+  # it. It did not: MilestoneAutoRun checked its quit timer AFTER `if (_role == "none")
+  # return;`, so a player that booted CORRECTLY never quit. Only a CORRUPT build ended
+  # the smoke test - by crashing - which meant this script could report failure but
+  # could never report success, and simply blocked on the first good build. The C# is
+  # fixed, but the deadline stays: this tool exists because Unity is not trusted, and
+  # trusting the player to exit on its own is the same mistake one level down.
   rm -f /tmp/bv_smoke.log
-  "$APP" -batchmode -nographics -partyrole none -partyseconds 6 -logFile /tmp/bv_smoke.log >/dev/null 2>&1
+  "$APP" -batchmode -nographics -partyrole none -partyseconds 6 -logFile /tmp/bv_smoke.log >/dev/null 2>&1 &
+  SMOKE_PID=$!
+  for _ in $(seq 1 30); do kill -0 "$SMOKE_PID" 2>/dev/null || break; sleep 1; done
+  if kill -0 "$SMOKE_PID" 2>/dev/null; then
+    kill -9 "$SMOKE_PID" 2>/dev/null; wait "$SMOKE_PID" 2>/dev/null
+    echo "  attempt $attempt: player never exited within 30s, rebuilding"
+    continue
+  fi
+  wait "$SMOKE_PID" 2>/dev/null
+
   if grep -q 'corrupted' /tmp/bv_smoke.log; then
     echo "  attempt $attempt: corrupt level0, rebuilding"
+    continue
+  fi
+
+  # POSITIVE evidence, not merely the absence of the word "corrupted". A build that
+  # produced no log at all, or died before running a single script, passed the old
+  # check silently. This line comes from MilestoneAutoRun.Start(), so it can only
+  # appear if the scene loaded and our own code ran in it.
+  if ! grep -q '\[AutoRun\]' /tmp/bv_smoke.log; then
+    echo "  attempt $attempt: scene loaded no Party scripts, rebuilding"
     continue
   fi
   echo "  attempt $attempt: OK  ($(stat -f%z "$OUT_DIR"/*.app/Contents/Resources/Data/level0 2>/dev/null) bytes)"
