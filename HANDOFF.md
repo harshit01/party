@@ -102,6 +102,7 @@ party/
 ├── HANDOFF.md              <- you are here
 ├── Docs/
 │   ├── CONCEPT.md  MINIGAMES.md  STEAM_PLAN.md  TOOLCHAIN.md
+│   ├── REDLIGHT_TUNING.md         measured behaviour; settle tuning with numbers
 │   ├── FIRST_STEPS_MAC.md         setup, corrected for this Mac
 │   ├── FINDING_01_steerability.md why the previous concept was dropped
 │   └── ArtTarget/menu_target.svg  APPROVED design target for the home screen
@@ -110,6 +111,12 @@ party/
 ├── Tests/
 │   ├── netcode_sync_test.sh    two processes, one world, positions compared
 │   ├── round_pacing_test.sh    a round has a shape (stops, duration, ends)
+│   ├── redlight_regression.sh  FULL Red Light suite - artifact, session, networked, AI
+│   ├── redlight_report.py      15 checks over a session log
+│   ├── bias_sweep.sh           same fixed seeds either side of a change
+│   ├── sweep_summary.py        spares/frames/wipeouts per seed
+│   ├── fixtures/               known-good + known-bad logs; the analyser is
+│   │                           calibrated against these before it is believed
 │   ├── compare_census.py       positional agreement at matched NetworkTime
 │   └── test_host.py            host quality check - PASSES
 └── Unity/                  Unity 6000.5.9f1, 3D URP
