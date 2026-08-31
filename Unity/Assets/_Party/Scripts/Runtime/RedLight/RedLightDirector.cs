@@ -119,6 +119,15 @@ namespace Party.RedLight
             // His memory softens between rounds. Without this, affinity only ever
             // accumulated and a player's first-round dice roll decided the whole night.
             if (round > 1) _bias?.Decay(0.10f);
+
+            // A GAME SHOW HOST ALWAYS HAS A PET AND A VICTIM - it is not left to dice.
+            // Affinity is seeded uniformly on [-1,1], so roughly one lobby in ten draws
+            // nobody above the +0.25 spare gate and Barnaby silently has no favourites
+            // all night: measured, a whole six-round session with 0 spares and every
+            // round a wipeout, because sparing is the only thing that saves a player who
+            // twitches. Floor the warmest player and cap the coldest so both halves of
+            // the mechanic can always fire.
+            _bias?.EnsureFavouriteAndTarget(Players(), 0.4f, -0.4f);
             foreach (PartyPlayer p in Players())
             {
                 p.eliminated = false;
@@ -289,8 +298,17 @@ namespace Party.RedLight
             // So he overreaches, the room sees it, and he softens on them - which sends
             // last round's victim up toward being this round's pet, and rotates who the
             // story is about. Getting genuinely caught still annoys him.
+            // BEING CAUGHT IS NOT AN OPINION. It used to cost -0.10, but getting
+            // caught moving is simply how you LOSE this game, so that penalty landed on
+            // nearly everyone nearly every round. Affinity stopped tracking what Barnaby
+            // thought of you and started tracking how many rounds had elapsed: with a
+            // 10% fade the recurrence is a(n+1) = 0.9*a(n) - 0.10, whose fixed point is
+            // -1.0, so the WHOLE LOBBY sank together. Measured over six rounds, one
+            // player's standing went 0.230, 0.107, -0.003, -0.103, -0.193, -0.273 -
+            // matching that recurrence to three decimals - and nobody was ever sparable
+            // because the spare gate is +0.25. His opinions now come only from things
+            // that are about HIM: he wronged you, or you are running away with it.
             if (reason == "framed") { _frames++; _bias.Nudge(p.netId, +0.15f); }
-            else                    _bias.Nudge(p.netId, -0.10f);
 
             verdictText = reason == "framed"
                 ? $"{p.displayName} — OUT. (Barnaby: \"I saw that.\" They did not move.)"

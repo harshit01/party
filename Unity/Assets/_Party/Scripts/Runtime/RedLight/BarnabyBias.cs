@@ -77,6 +77,39 @@ namespace Party.RedLight
                 _affinity[k] = Mathf.Lerp(_affinity[k], 0f, fraction);
         }
 
+        /// <summary>
+        /// Guarantee he has both a favourite and a victim this round.
+        ///
+        /// Affinity is drawn uniformly on [-1,1], so about one lobby in ten contains
+        /// nobody above the +0.25 spare gate - and in those sessions Barnaby simply has
+        /// no favourites all night. Measured: a full six-round session with 0 spares
+        /// and every single round a wipeout, because being spared is the only thing
+        /// that rescues a player who twitches during a stop.
+        ///
+        /// This lifts the warmest player to at least `pet` and pushes the coldest to at
+        /// most `target`, so both halves of the mechanic can always fire. It nudges the
+        /// EXTREMES rather than assigning roles at random: who he likes is still emergent,
+        /// this only guarantees the feeling exists at all.
+        /// </summary>
+        public void EnsureFavouriteAndTarget(IEnumerable<PartyPlayer> players, float pet, float target)
+        {
+            uint warmest = 0, coldest = 0;
+            float hi = float.MinValue, lo = float.MaxValue;
+            bool any = false;
+
+            foreach (PartyPlayer p in players)
+            {
+                float a = AffinityOf(p.netId);
+                if (a > hi) { hi = a; warmest = p.netId; }
+                if (a < lo) { lo = a; coldest = p.netId; }
+                any = true;
+            }
+            if (!any || warmest == coldest) return;
+
+            if (hi < pet)    _affinity[warmest] = pet;
+            if (lo > target) _affinity[coldest] = target;
+        }
+
         public string Describe(uint netId)
         {
             float a = AffinityOf(netId);
