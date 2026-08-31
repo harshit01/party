@@ -80,7 +80,16 @@ namespace Party.EditorTools
                 scenes           = new[] { sceneOverride ?? Scene },
                 locationPathName = outPath,
                 target           = target,
-                options          = BuildOptions.Development,
+                // NOT a development build by default.
+                //
+                // BuildOptions.Development draws Unity's "Development Build" watermark and
+                // the Development Console bar across the bottom of the screen - both were
+                // burned into the captured frame the founder called bad, and neither is
+                // part of the game. Logging via -logFile works identically without it, so
+                // the regression suite is unaffected. Set PARTY_DEV_BUILD=1 to get the
+                // profiler and the console back when actually debugging a player.
+                options          = System.Environment.GetEnvironmentVariable("PARTY_DEV_BUILD") == "1"
+                                   ? BuildOptions.Development : BuildOptions.None,
             };
 
             BuildReport report = BuildPipeline.BuildPlayer(opts);

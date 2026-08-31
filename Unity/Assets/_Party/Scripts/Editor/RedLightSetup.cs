@@ -78,7 +78,7 @@ namespace Party.EditorTools
             ground.name = "Lane";
             ground.transform.localScale = new Vector3(1.8f, 1f, 10.4f);   // ~18 x 104 units
             ground.GetComponent<Renderer>().sharedMaterial =
-                PresentationSetup.Lit("Lane", new Color(0.30f, 0.33f, 0.40f), 0.18f);
+                PresentationSetup.Lit("Lane", new Color(0.63f, 0.56f, 0.86f), 0.16f);   // lavender, per the art target
 
             MakeStripe("StartLine",  StartZ,  new Color(0.90f, 0.92f, 0.96f));
             MakeStripe("FinishLine", FinishZ, new Color(0.98f, 0.80f, 0.25f));
@@ -160,9 +160,11 @@ namespace Party.EditorTools
         /// </summary>
         static void BuildHazards(float halfWidth, float startZ, float finishZ)
         {
-            Material hazard = PresentationSetup.Lit("Hazard", new Color(0.88f, 0.32f, 0.30f), 0.35f,
-                                                    0f, new Color(0.30f, 0.05f, 0.04f));
-            Material pillar = PresentationSetup.Lit("Pillar", new Color(0.55f, 0.58f, 0.66f), 0.3f);
+            // Candy teal and warm orange rather than blood red - hazards should look like
+            // fairground furniture, not danger signage.
+            Material hazard = PresentationSetup.Lit("Hazard", new Color(0.36f, 0.88f, 0.90f), 0.35f,
+                                                    0f, new Color(0.04f, 0.24f, 0.26f));
+            Material pillar = PresentationSetup.Lit("Pillar", new Color(1f, 0.71f, 0.30f), 0.3f);
 
             GameObject root = new GameObject("Hazards");
             float first = startZ + 14f, last = finishZ - 10f;

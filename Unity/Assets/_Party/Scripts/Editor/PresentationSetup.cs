@@ -59,11 +59,14 @@ namespace Party.EditorTools
                 m = new Material(sh);
                 AssetDatabase.CreateAsset(m, SkyPath);
             }
-            m.SetFloat("_SunSize", 0.04f);
-            m.SetFloat("_AtmosphereThickness", 0.75f);
-            m.SetColor("_SkyTint", new Color(0.35f, 0.55f, 0.85f));
-            m.SetColor("_GroundColor", new Color(0.22f, 0.20f, 0.26f));
-            m.SetFloat("_Exposure", 1.25f);
+            // Bright, candy-coloured, high key - the Fall Guys reference in
+            // Docs/ArtTarget/redlight_target.svg. The old sky was a moody navy that made
+            // a party game show look like a car park at dusk.
+            m.SetFloat("_SunSize", 0.06f);
+            m.SetFloat("_AtmosphereThickness", 0.42f);
+            m.SetColor("_SkyTint", new Color(0.44f, 0.76f, 0.95f));
+            m.SetColor("_GroundColor", new Color(0.74f, 0.68f, 0.86f));
+            m.SetFloat("_Exposure", 1.5f);
             EditorUtility.SetDirty(m);
             return m;
         }
@@ -139,21 +142,25 @@ namespace Party.EditorTools
         public static void Lighting(GameObject lightGo)
         {
             Light l = lightGo.GetComponent<Light>();
-            l.color = new Color(1f, 0.95f, 0.85f);
-            l.intensity = 1.5f;
+            l.color = new Color(1f, 0.97f, 0.92f);
+            l.intensity = 1.35f;
             l.shadows = LightShadows.Soft;
-            lightGo.transform.rotation = Quaternion.Euler(42f, -35f, 0f);
+            lightGo.transform.rotation = Quaternion.Euler(48f, -28f, 0f);
 
             RenderSettings.skybox = Sky();
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor    = new Color(0.42f, 0.52f, 0.70f);
-            RenderSettings.ambientEquatorColor= new Color(0.30f, 0.30f, 0.38f);
-            RenderSettings.ambientGroundColor = new Color(0.16f, 0.14f, 0.18f);
+            // Bright ambient with a lifted ground bounce: the reference has almost no
+            // black anywhere, and deep shadow is what made the old frame read as grim.
+            RenderSettings.ambientSkyColor    = new Color(0.66f, 0.80f, 0.94f);
+            RenderSettings.ambientEquatorColor= new Color(0.62f, 0.58f, 0.76f);
+            RenderSettings.ambientGroundColor = new Color(0.46f, 0.40f, 0.56f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.42f, 0.52f, 0.68f);
-            RenderSettings.fogStartDistance = 55f;
-            RenderSettings.fogEndDistance = 145f;
+            // Fog tinted to the sky, so the far end of the lane dissolves into it rather
+            // than ending in a hard grey band.
+            RenderSettings.fogColor = new Color(0.78f, 0.84f, 0.94f);
+            RenderSettings.fogStartDistance = 62f;
+            RenderSettings.fogEndDistance = 165f;
         }
 
         public static GameObject GlobalVolume()
@@ -168,11 +175,17 @@ namespace Party.EditorTools
         /// <summary>Two banks of bobbing primitives either side of the lane.</summary>
         public static void Crowd(float laneHalfWidth, float fromZ, float toZ)
         {
+            // DESATURATED ON PURPOSE. These used to be fully saturated primaries at 0.90
+            // to 0.95 value, which made hundreds of crowd capsules the brightest, busiest
+            // thing on screen - brighter than the actual cast - so the eye went to the
+            // scenery and the players read as specks. They are a backdrop: same hues,
+            // pulled toward the lavender of the stands and dropped in value so the
+            // characters win every contrast fight.
             Color[] palette =
             {
-                new Color(0.90f,0.35f,0.35f), new Color(0.35f,0.55f,0.90f),
-                new Color(0.95f,0.78f,0.30f), new Color(0.45f,0.80f,0.50f),
-                new Color(0.72f,0.45f,0.85f), new Color(0.95f,0.55f,0.30f),
+                new Color(0.62f,0.48f,0.66f), new Color(0.46f,0.52f,0.76f),
+                new Color(0.68f,0.62f,0.58f), new Color(0.48f,0.62f,0.66f),
+                new Color(0.58f,0.50f,0.74f), new Color(0.70f,0.56f,0.58f),
             };
             Material[] mats = new Material[palette.Length];
             for (int i = 0; i < palette.Length; i++) mats[i] = Lit($"Crowd{i}", palette[i], 0.2f);

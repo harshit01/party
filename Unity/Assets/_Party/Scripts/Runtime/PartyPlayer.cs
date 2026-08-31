@@ -79,7 +79,13 @@ namespace Party
         /// <summary>Crossed the line.</summary>
         [SyncVar(hook = nameof(OnStateChanged))]  public bool   finished;
 
-        [Header("Scene refs")]
+        [Header("Name tag")]
+    [Tooltip("Fully opaque closer than this.")]
+    [SerializeField] float nameFadeStart = 9f;
+    [Tooltip("Hidden beyond this. Keeps the screen clear of distant clutter.")]
+    [SerializeField] float nameFadeEnd = 22f;
+
+    [Header("Scene refs")]
         [Tooltip("Visual-only child the Filament is built under. Never the networked root.")]
         [SerializeField] Transform juiceVisual;
         [SerializeField] Renderer  bodyRenderer;
@@ -202,10 +208,31 @@ namespace Party
                     Character.FilamentMood.Idle;
             }
 
-            // Billboard the label at whatever camera is rendering.
+            // NAME TAGS: small, near, and never your own.
+            //
+            // The old behaviour drew every tag at full size all the time. From the wide
+            // broadcast shot that put five of them on top of one another in the middle of
+            // the screen as one illegible pile - it was the single worst thing in the
+            // captured frame. Fall Guys does show names, so they stay, but only for
+            // players close enough to matter and faded out with distance. Your own is
+            // hidden: the camera is already behind you, so a tag over your head is a
+            // label saying "you are here".
             if (nameTag == null) return;
             Camera c = Camera.main;
-            if (c != null) nameTag.transform.rotation = c.transform.rotation;
+            if (c == null) return;
+
+            nameTag.transform.rotation = c.transform.rotation;
+
+            if (isLocalPlayer) { nameTag.gameObject.SetActive(false); return; }
+
+            float dist = Vector3.Distance(c.transform.position, transform.position);
+            bool near = dist < nameFadeEnd;
+            if (nameTag.gameObject.activeSelf != near) nameTag.gameObject.SetActive(near);
+            if (!near) return;
+
+            float a = Mathf.InverseLerp(nameFadeEnd, nameFadeStart, dist);
+            Color baseCol = eliminated ? new Color(0.6f, 0.6f, 0.65f) : colour;
+            nameTag.color = new Color(baseCol.r, baseCol.g, baseCol.b, a);
         }
 
         void OnStateChanged(bool _, bool __) { ApplyName(); ApplyColour(); }
@@ -227,7 +254,14 @@ namespace Party
             // The chassis colour comes from the look now; elimination greys it out.
             if (eliminated && bodyRenderer != null)
                 bodyRenderer.material.SetColor("_BaseColor", new Color(0.32f, 0.32f, 0.36f));
-            if (nameTag != null) nameTag.color = eliminated ? new Color(0.6f, 0.6f, 0.65f) : colour;
+            // NOTE: alpha is owned by the distance fade in LateUpdate, so only the RGB
+            // is set here. Writing an opaque colour caused tags to pop back to full
+            // strength for a frame every time someone was eliminated.
+            if (nameTag != null)
+            {
+                Color c = eliminated ? new Color(0.6f, 0.6f, 0.65f) : colour;
+                nameTag.color = new Color(c.r, c.g, c.b, nameTag.color.a);
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 using Mirror;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Party
 {
@@ -34,8 +35,34 @@ namespace Party
             _target = Mathf.Clamp(_nm.targetParticipants, 2, 8);
         }
 
+        /// <summary>
+        /// Hidden once a session is actually running, toggled with F3.
+        ///
+        /// This panel is a debugging instrument, not part of the game, and it was sitting
+        /// permanently in the top-left corner of the playable screen showing transport
+        /// names and Steam failure text. It is still needed - you cannot host or join
+        /// without it until real menus exist - so it shows while you are unconnected and
+        /// gets out of the way the moment a round starts.
+        /// </summary>
+        bool _show = true;
+
+        bool _showForced;
+
+        void Update()
+        {
+            Keyboard k = Keyboard.current;
+            if (k == null || !k.f3Key.wasPressedThisFrame) return;
+
+            if (NetworkClient.active || NetworkServer.active) _showForced = !_showForced;
+            else _show = !_show;
+        }
+
         void OnGUI()
         {
+            bool inSession = NetworkClient.active || NetworkServer.active;
+            if (inSession && !_showForced) return;
+            if (!_show) return;
+
             GUILayout.BeginArea(new Rect(10, 10, 330, 320), GUI.skin.box);
 
             GUILayout.Label($"<b>Party — netcode milestone</b>", new GUIStyle(GUI.skin.label) { richText = true });
