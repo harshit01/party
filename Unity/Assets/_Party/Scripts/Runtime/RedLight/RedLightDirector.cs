@@ -65,6 +65,9 @@ namespace Party.RedLight
         BarnabyBias _bias;
         HostVoice   _voice;
         readonly Dictionary<uint, Vector3> _freezeSnapshot = new Dictionary<uint, Vector3>();
+        // Who Barnaby has decided to fit up THIS stop. Decided once, when the freeze
+        // snapshot is taken - see TakeFreezeSnapshot.
+        readonly HashSet<uint> _framedThisStop = new HashSet<uint>();
         bool   _snapshotTaken;
         double _judgeAt;
         int    _stopsThisRound, _spares, _frames;
@@ -91,7 +94,12 @@ namespace Party.RedLight
         {
             round++;
             _freezeSnapshot.Clear();
+            _framedThisStop.Clear();
             _stopsThisRound = _spares = _frames = 0;
+
+            // His memory softens between rounds. Without this, affinity only ever
+            // accumulated and a player's first-round dice roll decided the whole night.
+            if (round > 1) _bias?.Decay(0.10f);
             foreach (PartyPlayer p in Players())
             {
                 p.eliminated = false;
@@ -191,8 +199,21 @@ namespace Party.RedLight
         [Server] void TakeFreezeSnapshot()
         {
             _freezeSnapshot.Clear();
+            _framedThisStop.Clear();
             foreach (PartyPlayer p in Players())
+            {
                 _freezeSnapshot[p.netId] = p.transform.position;
+
+                // ONE ROLL PER STOP. JudgeMovers runs every frame while the lane is
+                // frozen, and it used to roll WouldFrame on every pass - so a 17%
+                // per-frame chance became a certainty within milliseconds. Measured:
+                // the same player framed in 6 of 6 rounds, and the remote client in
+                // 3 of 3. BarnabyBias says framing "must sting, not exhaust"; rolled
+                // per frame it could only ever exhaust. The odds live in WouldFrame;
+                // this decides how often they are consulted.
+                if (!p.eliminated && !p.finished && _bias.WouldFrame(p.netId))
+                    _framedThisStop.Add(p.netId);
+            }
             _snapshotTaken = true;
         }
 
@@ -219,7 +240,7 @@ namespace Party.RedLight
 
                 if (moved) { Eliminate(p, "moved"); continue; }
 
-                if (_bias.WouldFrame(p.netId))
+                if (_framedThisStop.Contains(p.netId))
                     Eliminate(p, "framed");
             }
         }
@@ -227,14 +248,36 @@ namespace Party.RedLight
         [Server] void Eliminate(PartyPlayer p, string reason)
         {
             p.eliminated = true;
-            if (reason == "framed") _frames++;
-            _bias.Nudge(p.netId, -0.1f);   // being called out sours things further
+
+            // READ HIS OPINION BEFORE CHANGING IT.
+            // This log line is the only record of WHY someone went out, and the
+            // regression suite reads it to check that frames land on grudges and
+            // spares on favourites. Reading Describe() after the nudge below reported
+            // the standing the player had AFTER being wronged: a grudge at -0.40 got
+            // +0.15 and was logged as "neutral", so a correctly-targeted frame looked
+            // like a mis-targeted one. The verdict must describe the moment of the
+            // decision, not its consequence.
+            string standing = _bias.Describe(p.netId);
+
+            // THE DIRECTION HERE IS THE WHOLE MECHANIC.
+            // Both cases used to be -0.1, so framing someone unfairly made him dislike
+            // them MORE and framing them again more likely still. That is a death
+            // spiral, not a grudge: one player was framed every round of a six-round
+            // session and rode the affinity floor to -1.0 while nobody was ever spared.
+            // A victim who stays the victim is a rule, and the game's signature is
+            // supposed to be a host who is CAPRICIOUS.
+            //
+            // So he overreaches, the room sees it, and he softens on them - which sends
+            // last round's victim up toward being this round's pet, and rotates who the
+            // story is about. Getting genuinely caught still annoys him.
+            if (reason == "framed") { _frames++; _bias.Nudge(p.netId, +0.15f); }
+            else                    _bias.Nudge(p.netId, -0.10f);
 
             verdictText = reason == "framed"
                 ? $"{p.displayName} — OUT. (Barnaby: \"I saw that.\" They did not move.)"
                 : $"{p.displayName} — OUT.";
 
-            Debug.Log($"[RedLight] {p.displayName} out ({reason}, standing={_bias.Describe(p.netId)})");
+            Debug.Log($"[RedLight] {p.displayName} out ({reason}, standing={standing})");
             if (_voice != null) _voice.PrefetchCallout(p.displayName, reason == "framed", Players());
         }
 
@@ -246,6 +289,10 @@ namespace Party.RedLight
                 if (p.transform.position.z < finishZ) continue;
 
                 p.finished = true;
+                // A showman wants a close race, not a runaway leader - so winning costs
+                // you standing. This is also what stops Decay flattening everyone to
+                // neutral: fading alone gives him no NEW opinions, just weaker old ones.
+                _bias.Nudge(p.netId, -0.15f);
                 verdictText = $"{p.displayName} reaches the line!";
                 SetPhase(RoundPhase.Finished, 0f);
                 Summarise("winner:" + p.displayName);
@@ -270,6 +317,7 @@ namespace Party.RedLight
                 if (best != null)
                 {
                     best.finished = true;
+                    _bias.Nudge(best.netId, -0.15f);   // same: leading is not endearing
                     verdictText = $"Time! {best.displayName} was furthest.";
                     SetPhase(RoundPhase.Finished, 0f);
                     if (_voice != null) _voice.PrefetchFinale(best.displayName, Players());
@@ -294,6 +342,20 @@ namespace Party.RedLight
             foreach (PartyPlayer p in Players()) if (p.eliminated) outs++;
             Debug.Log($"[RedLight] ROUND {round} END outcome={outcome} stops={stops} " +
                       $"eliminated={outs} spared={_spares} framed={_frames}");
+
+            // Standings, every round, so BIAS PERSISTENCE is observable rather than
+            // asserted. Barnaby's whole claim is that he remembers who annoyed him three
+            // rounds ago; until this line existed the only standing ever logged was the
+            // one attached to an elimination, so nothing could check that affinity
+            // actually carried between rounds - or that Nudge was souring the right people.
+            if (_bias != null)
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.Append($"[RedLight] STANDINGS round={round}");
+                foreach (PartyPlayer p in Players())
+                    sb.Append($" | {p.displayName}={_bias.AffinityOf(p.netId):F3}({_bias.Describe(p.netId)})");
+                Debug.Log(sb.ToString());
+            }
         }
 
         public static IEnumerable<PartyPlayer> Players() =>

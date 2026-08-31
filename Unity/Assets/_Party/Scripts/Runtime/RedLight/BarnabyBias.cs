@@ -59,6 +59,24 @@ namespace Party.RedLight
             return _rng.NextDouble() < (-a) * 0.35f;  // rarer than sparing - it must sting, not exhaust
         }
 
+        /// <summary>
+        /// Opinions fade a little each round.
+        ///
+        /// A safety valve, not a mechanic. Affinity used to move in one direction only
+        /// (-0.1, on every call-out) so a session was a ratchet: the spare pool could
+        /// only shrink and the grudge pool could only grow. Measured over six rounds,
+        /// one player was framed every single round and slid to the -1.0 floor while
+        /// nobody was ever spared once. Keep this GENTLE - the nudges are supposed to
+        /// be what moves his mind, and too much fade here flattens everyone to neutral
+        /// and he stops having opinions at all.
+        /// </summary>
+        public void Decay(float fraction)
+        {
+            var keys = new List<uint>(_affinity.Keys);
+            foreach (uint k in keys)
+                _affinity[k] = Mathf.Lerp(_affinity[k], 0f, fraction);
+        }
+
         public string Describe(uint netId)
         {
             float a = AffinityOf(netId);
