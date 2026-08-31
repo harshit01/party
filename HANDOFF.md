@@ -126,7 +126,19 @@ party/
   `Tests/netcode_sync_test.sh`.
 - **Red Light, Barnaby (MINIGAMES.md #9).** A real round: ~10 STOP calls, hazards,
   eliminations, a winner or a timeout. Barnaby SPARES favourites and FRAMES grudges,
-  and both fire. `Tests/round_pacing_test.sh`.
+  and both fire - now measured at 2.45 spares and 0.35 frames per round over 20 rounds
+  on fixed seeds. `Tests/redlight_regression.sh` (15 checks, calibrated against a
+  known-bad fixture) and `Tests/bias_sweep.sh`.
+
+  CORRECTED Aug 2026. This entry used to cite `round_pacing_test.sh` as evidence that
+  both levers fire. That script only ever checked STOP count and round duration, so the
+  claim was untested - and when it WAS tested, a six-round session produced 0 spares
+  while one player was framed in all six rounds. Both were fixed; see
+  `Docs/REDLIGHT_TUNING.md` for the numbers.
+
+  Still open: >50% of rounds end in a wipeout with nobody reaching the line. That is
+  NOT a bias problem - Barnaby causes 7 of 91 eliminations; the rest are bots twitching
+  during STOP. See the tuning doc.
 - **The host, live in game.** Real callbacks to earlier rounds. Cold call 1.7-2.9s,
   cached 0.083s - pre-generation is load-bearing exactly as section 4 says.
 - **Bots.** Per-minigame policies, unstick themselves, indistinguishable from humans
