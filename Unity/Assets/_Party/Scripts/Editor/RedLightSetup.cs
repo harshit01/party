@@ -51,6 +51,15 @@ namespace Party.EditorTools
         [MenuItem("Party/Rebuild Red Light scene")]
         public static void Build()
         {
+            // DETERMINISTIC SCENE BUILDS.
+            //
+            // These builders use Random.Range for crowd positions, hazard speeds and
+            // scatter, so every rebuild produced DIFFERENT scene content - level0 came out
+            // a different size each time, and some variants shipped a player that died at
+            // startup with "level0 is corrupted". A fixed seed makes each build byte-identical,
+            // which turns an intermittent failure into a reproducible one.
+            Random.InitState(20260824);
+
             GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             if (playerPrefab == null)
             {
@@ -78,6 +87,7 @@ namespace Party.EditorTools
             PresentationSetup.FinishGantry(FinishZ, HalfWidth);
             PresentationSetup.Crowd(HalfWidth, StartZ - 4f, FinishZ + 4f);
             BuildHazards(HalfWidth, StartZ, FinishZ);
+            DressCourse(HalfWidth, StartZ, FinishZ);
 
             GameObject lightGo = new GameObject("Directional Light");
             lightGo.AddComponent<Light>().type = LightType.Directional;
@@ -117,7 +127,6 @@ namespace Party.EditorTools
             netGo.AddComponent<PartyHUD>();
             netGo.AddComponent<RedLightHUD>();
             netGo.AddComponent<MilestoneAutoRun>();
-            netGo.AddComponent<Party.Character.MatchBootstrap>();
 
             // Director as a server-spawned prefab. NO NetworkIdentity on this object.
             GameObject directorPrefab = BuildDirectorPrefab();
@@ -216,6 +225,60 @@ namespace Party.EditorTools
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// CC0 set dressing along the course. Purely visual.
+        ///
+        /// The hazards keep their primitive geometry: they carry the colliders the
+        /// sweeper and piston scripts drive, and their flat red is deliberate - a player
+        /// has to read "that will hit me" instantly from across a room. Decoration goes
+        /// OUTSIDE the lane so it can never change what the physics does.
+        /// </summary>
+        static void DressCourse(float halfWidth, float startZ, float finishZ)
+        {
+            GameObject dress = new GameObject("Dressing");
+
+            // Fence running the full length just outside the barriers.
+            float step = 4.4f;
+            int n = Mathf.CeilToInt((finishZ - startZ + 12f) / step);
+            for (int side = -1; side <= 1; side += 2)
+                for (int i = 0; i < n; i++)
+                    PresentationSetup.Kit(dress.transform, "fence-straight",
+                        new Vector3(side * (halfWidth + 1.1f), 0f, startZ - 6f + i * step),
+                        Quaternion.Euler(0f, 90f, 0f), 2.2f);
+
+            // Crates and barrels in clusters, so the sides are not a bare wall.
+            string[] clutter = { "crate", "crate-strong", "barrel", "crate-item" };
+            int seed = 0;
+            for (float z = startZ + 4f; z < finishZ; z += 11f)
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    if ((seed++ % 3) == 0) continue;              // gaps, not a hedge
+                    PresentationSetup.Kit(dress.transform, clutter[seed % clutter.Length],
+                        new Vector3(side * (halfWidth + 3.2f), 0f, z),
+                        Quaternion.Euler(0f, seed * 37f, 0f), 2.4f);
+                    if ((seed % 4) == 0)
+                        PresentationSetup.Kit(dress.transform, "crate",
+                            new Vector3(side * (halfWidth + 3.2f), 1.15f, z),
+                            Quaternion.Euler(0f, seed * 19f, 0f), 2.4f);
+                }
+
+            // Flags at the start and the finish.
+            for (int side = -1; side <= 1; side += 2)
+            {
+                PresentationSetup.Kit(dress.transform, "flag",
+                    new Vector3(side * (halfWidth + 1.6f), 0f, startZ),
+                    Quaternion.Euler(0f, side * 25f, 0f), 3.0f);
+                PresentationSetup.Kit(dress.transform, "flag",
+                    new Vector3(side * (halfWidth + 1.6f), 0f, finishZ),
+                    Quaternion.Euler(0f, side * -25f, 0f), 3.0f);
+            }
+
+            // Arrows on the deck pointing the way, at each hazard cluster.
+            for (float z = startZ + 14f; z < finishZ - 8f; z += 13f)
+                PresentationSetup.Kit(dress.transform, "arrow",
+                    new Vector3(0f, 0.06f, z), Quaternion.Euler(90f, 0f, 0f), 2.0f);
         }
 
         static void MakeStripe(string name, float z, Color c)

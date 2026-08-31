@@ -12,7 +12,15 @@
 # is a TIMING decision, and this test pins it down.
 set -uo pipefail
 
-APP="${1:-Unity/Build/MacRedLight/Party.app/Contents/MacOS/Party}"
+# Resolve the executable rather than hardcoding its name: it is derived from Unity's
+# productName, which changed to "Party Game" and silently broke this test.
+find_player() {
+  for app in "$1"/*.app; do
+    [ -d "$app" ] || continue
+    for exe in "$app/Contents/MacOS/"*; do [ -x "$exe" ] && { echo "$exe"; return; }; done
+  done
+}
+APP="${1:-$(find_player Unity/Build/MacRedLight)}"
 LOG=/tmp/party_pacing.log
 MIN_STOPS=4          # a round with fewer than this is a dash, not a game
 MIN_SECONDS=20       # ditto
@@ -23,7 +31,7 @@ rm -f "$LOG"
 # Kill any player left over from a previous suite. Running the suites back to back
 # produced "SocketException: Address already in use" and the new client silently
 # connected to the OLD host, which invalidated every assertion that followed.
-pkill -f 'Party.app/Contents/MacOS/Party' 2>/dev/null; sleep 1
+pkill -f 'Contents/MacOS/Party' 2>/dev/null; sleep 1
 
 echo "== running a round (5 participants, autopilot) =="
 "$APP" -batchmode -nographics -partyrole host -partytarget 5 -partyround \

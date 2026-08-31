@@ -46,6 +46,15 @@ namespace Party.EditorTools
         [MenuItem("Party/Rebuild menu scene")]
         public static void Build()
         {
+            // DETERMINISTIC SCENE BUILDS.
+            //
+            // These builders use Random.Range for crowd positions, hazard speeds and
+            // scatter, so every rebuild produced DIFFERENT scene content - level0 came out
+            // a different size each time, and some variants shipped a player that died at
+            // startup with "level0 is corrupted". A fixed seed makes each build byte-identical,
+            // which turns an intermittent failure into a reproducible one.
+            Random.InitState(20260824);
+
             _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
                  ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
             // Chunky display face for the logo. Arial is why the title read as a label
@@ -423,7 +432,12 @@ namespace Party.EditorTools
             string path = $"Assets/_Party/Art/Kenney/Kit/{modelName}.fbx";
             GameObject src = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (src == null) { Debug.LogWarning($"[Party] kit model missing: {modelName}"); return; }
-            GameObject g = (GameObject)PrefabUtility.InstantiatePrefab(src);
+            // Object.Instantiate, NOT PrefabUtility.InstantiatePrefab. The latter creates a
+            // linked prefab INSTANCE carrying modification data, and building the scene
+            // with those produced a player that died at startup with "level0 is corrupted"
+            // - same signature as the volume-profile bug: a MonoBehaviour deserialising
+            // past the end of the data. A plain copy has no linkage to serialise.
+            GameObject g = Object.Instantiate(src);
             g.transform.SetParent(parent, false);
             g.transform.position = pos;
             g.transform.rotation = rot;

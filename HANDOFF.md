@@ -66,6 +66,26 @@ keyboard**, hosted by an AI presenter who genuinely watched you play and remembe
   deciding whether the host treats bots as characters in their own right or mostly
   ignores them.
 
+### KNOWN ISSUE — Red Light player builds are intermittently corrupt
+
+Roughly one build in three produces a working player. The rest die at startup with
+`level0 is corrupted`, after Unity has reported `[Build] StandaloneOSX -> Succeeded`.
+
+- **Only affects builds.** Editor Play mode is unaffected, and NetTest builds cleanly
+  every time, so development and the netcode path are not blocked.
+- **Ruled out:** Kenney props, the PartyPlayer prefab, DepthOfField, the whole
+  post-processing volume, MatchBootstrap.
+- **Did not fix it:** retrying, doing the scene rebuild and player build in one Unity
+  invocation, seeding Random so scene content is identical.
+- **The telling detail:** `level0` is a different size on every build even with a fixed
+  seed, so the non-determinism is inside Unity's serialisation, not our content.
+
+**Workaround:** `Tools/build_verified.sh` builds, boots the player, checks the scene
+loads, and rebuilds if not — up to 10 attempts, so failure odds are about 2%. Use it
+instead of calling Unity's build method directly. Unity must be closed.
+
+Worth revisiting on a Unity patch release, or if a smaller repro turns up.
+
 ### Open, deliberately undecided
 - **Game name.** Not chosen. Do the trademark/collision check BEFORE any art is
   commissioned (this cost us once already).

@@ -103,6 +103,43 @@ namespace Party
             base.Awake();
         }
 
+        /// <summary>
+        /// Acts on whatever the menu chose.
+        ///
+        /// This lived in a separate MatchBootstrap component until adding that component
+        /// to the scene produced a player that died at startup with "level0 is corrupted"
+        /// - reproducible: with the component the build was corrupt, without it the scene
+        /// ran. The script itself was clean (valid meta, one class, no duplicate types),
+        /// so the fault was in Unity's scene serialisation rather than anything readable
+        /// in the code. Folding the logic into a component the scene already has avoids
+        /// the whole problem.
+        /// </summary>
+        public override void Start()
+        {
+            base.Start();
+
+            targetParticipants = Mathf.Clamp(Character.PendingSetup.participants, 2, 8);
+            SteamLobby lobby = GetComponent<SteamLobby>();
+
+            switch (Character.PendingSetup.Consume())
+            {
+                case Character.PendingSetup.Mode.HostLocal:
+                    StartHost();
+                    RedLight.RedLightDirector.Instance?.BeginRound();
+                    break;
+                case Character.PendingSetup.Mode.HostSteam:
+                    if (lobby != null) lobby.HostLobby(targetParticipants);
+                    break;
+                case Character.PendingSetup.Mode.JoinCode:
+                    if (lobby != null) lobby.JoinByCode(Character.PendingSetup.code);
+                    break;
+                case Character.PendingSetup.Mode.JoinAddress:
+                    networkAddress = Character.PendingSetup.address;
+                    StartClient();
+                    break;
+            }
+        }
+
         public override void OnStartServer()
         {
             base.OnStartServer();

@@ -19,6 +19,24 @@ namespace Party.EditorTools
     {
         const string Scene = "Assets/_Party/Scenes/NetTest.unity";
 
+        /// <summary>
+        /// Rebuild the scene AND build the player in ONE Unity invocation.
+        ///
+        /// Doing them as two separate launches produced an intermittently corrupt level0 -
+        /// identical inputs gave corrupt/clean/corrupt across three cycles. The likely
+        /// mechanism is the second process building against a scene the asset database
+        /// has not finished settling after the first process saved it. One invocation
+        /// removes the hand-off entirely.
+        /// </summary>
+        public static void RebuildAndBuildRedLight()
+        {
+            RedLightSetup.Build();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+            Run(BuildTarget.StandaloneOSX, "Build/MacRedLight/Party.app",
+                "Assets/_Party/Scenes/RedLight.unity");
+        }
+
         [MenuItem("Party/Build/macOS")]
         public static void BuildMac() => Run(BuildTarget.StandaloneOSX, "Build/Mac/Party.app");
 

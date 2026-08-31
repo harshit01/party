@@ -17,7 +17,13 @@
 # without it a human-slot capsule never moves and a broken input path looks fine.
 set -uo pipefail
 
-APP="${1:-Unity/Build/Mac/Party.app/Contents/MacOS/Party}"
+find_player() {
+  for app in "$1"/*.app; do
+    [ -d "$app" ] || continue
+    for exe in "$app/Contents/MacOS/"*; do [ -x "$exe" ] && { echo "$exe"; return; }; done
+  done
+}
+APP="${1:-$(find_player Unity/Build/Mac)}"
 HOST_LOG=/tmp/party_host.log
 CLI_LOG=/tmp/party_client.log
 rm -f "$HOST_LOG" "$CLI_LOG"
@@ -27,7 +33,7 @@ rm -f "$HOST_LOG" "$CLI_LOG"
 # Kill any player left over from a previous suite. Running the suites back to back
 # produced "SocketException: Address already in use" and the new client silently
 # connected to the OLD host, which invalidated every assertion that followed.
-pkill -f 'Party.app/Contents/MacOS/Party' 2>/dev/null; sleep 1
+pkill -f 'Contents/MacOS/Party' 2>/dev/null; sleep 1
 
 echo "== host: 3 participants (1 human slot + 2 bots), autopilot on =="
 "$APP" -batchmode -nographics -partyrole host -partytarget 3 -partyseconds 34 \

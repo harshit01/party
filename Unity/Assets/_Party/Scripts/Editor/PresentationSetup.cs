@@ -116,6 +116,10 @@ namespace Party.EditorTools
             // DEPTH OF FIELD is the biggest single step from "prototype" to "produced":
             // a sharp subject against a softly blurred background reads as a photograph
             // rather than a flat render, and it hides geometry simplicity for free.
+            // Depth of field stays MENU-ONLY in spirit but lives in the shared profile.
+            // A focus distance tuned for a character 9m from the menu camera is wrong for
+            // a gameplay camera much further back; if capsules render soft, gameplay wants
+            // its own profile rather than a second set of guessed numbers here.
             DepthOfField dof = Persist<DepthOfField>();
             dof.mode.overrideState = true;          dof.mode.value = DepthOfFieldMode.Bokeh;
             dof.focusDistance.overrideState = true; dof.focusDistance.value = 9.2f;
@@ -214,6 +218,31 @@ namespace Party.EditorTools
             beam.transform.localPosition = new Vector3(0f, 6f, z);
             beam.transform.localScale = new Vector3(halfWidth * 2f + 0.5f, 0.6f, 0.5f);
             beam.GetComponent<Renderer>().sharedMaterial = gold;
+        }
+
+        /// <summary>
+        /// Places a CC0 kit model. DECORATION ONLY - colliders are stripped, because
+        /// gameplay collision belongs to the primitives that the hazard scripts drive.
+        /// Dressing must never change what the physics does.
+        /// </summary>
+        public static GameObject Kit(Transform parent, string modelName, Vector3 pos,
+                                     Quaternion rot, float scale)
+        {
+            string path = $"Assets/_Party/Art/Kenney/Kit/{modelName}.fbx";
+            GameObject src = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (src == null) { Debug.LogWarning($"[Party] kit model missing: {modelName}"); return null; }
+            // Object.Instantiate, NOT PrefabUtility.InstantiatePrefab. The latter creates a
+            // linked prefab INSTANCE carrying modification data, and building the scene
+            // with those produced a player that died at startup with "level0 is corrupted"
+            // - same signature as the volume-profile bug: a MonoBehaviour deserialising
+            // past the end of the data. A plain copy has no linkage to serialise.
+            GameObject g = Object.Instantiate(src);
+            if (parent != null) g.transform.SetParent(parent, false);
+            g.transform.position = pos;
+            g.transform.rotation = rot;
+            g.transform.localScale = Vector3.one * scale;
+            foreach (var c in g.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(c);
+            return g;
         }
 
         /// <summary>Side walls so the lane feels like a course rather than an edge of nothing.</summary>
