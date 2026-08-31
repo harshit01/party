@@ -82,7 +82,26 @@ namespace Party.RedLight
 
         public override void OnStartServer()
         {
-            _bias = new BarnabyBias(Random.Range(int.MinValue, int.MaxValue));
+            // The seed is CHOOSABLE and always LOGGED.
+            //
+            // Barnaby's opinions are drawn at random, and how the night goes depends
+            // heavily on that draw - one session had nobody above the +0.25 spare gate
+            // and produced 0 spares and six wipeouts, while another with the same code
+            // produced 12 spares and none. Comparing two runs of different seeds and
+            // calling the difference an improvement is exactly the mistake HANDOFF.md
+            // section 6.8 was written about: change ONE thing and re-run the SAME
+            // configuration before believing any result.
+            //
+            // Logging it also means any session a human reports as bad can be replayed
+            // exactly, instead of being described from memory.
+            int seed = Random.Range(int.MinValue, int.MaxValue);
+            string[] argv = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < argv.Length - 1; i++)
+                if (argv[i] == "-partybiasseed" && int.TryParse(argv[i + 1], out int s))
+                { seed = s; break; }
+
+            Debug.Log($"[RedLight] bias seed={seed}");
+            _bias = new BarnabyBias(seed);
         }
 
         // ------------------------------------------------------------------
