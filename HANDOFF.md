@@ -101,29 +101,51 @@ Worth revisiting on a Unity patch release, or if a smaller repro turns up.
 party/
 ├── HANDOFF.md              <- you are here
 ├── Docs/
-│   ├── CONCEPT.md          the game, the three layers, the AI growth path
-│   ├── MINIGAMES.md        all 12, grouped into 5 shared tech families
-│   ├── STEAM_PLAN.md       costs, 30-day rule, MANDATORY AI disclosure
-│   ├── TOOLCHAIN.md        what to install, machine decision + specs
-│   └── FINDING_01_steerability.md   why the previous concept was dropped
-├── Server/
-│   └── hostserver.py       THE HOST — built, running, proven
-├── Prompts/characters/     3 sample characters (from the dropped concept)
-└── Tests/
-    ├── test_host.py        host quality check — PASSES
-    └── test_steerability.py  from the dropped concept; kept for its method
+│   ├── CONCEPT.md  MINIGAMES.md  STEAM_PLAN.md  TOOLCHAIN.md
+│   ├── FIRST_STEPS_MAC.md         setup, corrected for this Mac
+│   ├── FINDING_01_steerability.md why the previous concept was dropped
+│   └── ArtTarget/menu_target.svg  APPROVED design target for the home screen
+├── Server/hostserver.py    THE HOST - built, running, proven live in-game
+├── Tools/build_verified.sh build + smoke-test + retry (see KNOWN ISSUE)
+├── Tests/
+│   ├── netcode_sync_test.sh    two processes, one world, positions compared
+│   ├── round_pacing_test.sh    a round has a shape (stops, duration, ends)
+│   ├── compare_census.py       positional agreement at matched NetworkTime
+│   └── test_host.py            host quality check - PASSES
+└── Unity/                  Unity 6000.5.9f1, 3D URP
+    └── Assets/_Party/
+        ├── Scenes/  Menu.unity  RedLight.unity  NetTest.unity
+        ├── Prefabs/ PartyPlayer.prefab  RedLightDirector.prefab
+        ├── Art/     generated textures, LuckiestGuy.ttf, Kenney/ (CC0)
+        └── Scripts/ Runtime/{Character,Juice,RedLight}  Editor/
 ```
 
-**Unity project EXISTS as of Aug 2026** at `Unity/` — Unity 6000.5.9f1, 3D URP,
-created from the editor's own `com.unity.template.urp-blank`. Netcode stack is
-installed and compiles clean: Mirror 96.11.2 (vendored in `Assets/Mirror`),
-FizzySteamworks 6.0.1 and Steamworks.NET 2025.164.1 (both UPM git deps, pinned in
-`packages-lock.json`). Input System 1.20.0 ships with the template.
+### Proven with evidence
+- **Netcode.** Host-authoritative, Mirror + kcp locally. Two processes agree on rosters
+  and positions at matched NetworkTime; lag is bounded and uniform, not divergent.
+  `Tests/netcode_sync_test.sh`.
+- **Red Light, Barnaby (MINIGAMES.md #9).** A real round: ~10 STOP calls, hazards,
+  eliminations, a winner or a timeout. Barnaby SPARES favourites and FRAMES grudges,
+  and both fire. `Tests/round_pacing_test.sh`.
+- **The host, live in game.** Real callbacks to earlier rounds. Cold call 1.7-2.9s,
+  cached 0.083s - pre-generation is load-bearing exactly as section 4 says.
+- **Bots.** Per-minigame policies, unstick themselves, indistinguishable from humans
+  on the wire. Solo play works.
 
-**No gameplay code has been written.** The next thing to build is the netcode
-milestone in §5 step 2a.
+### Built, working in the editor, not independently verified
+- **Menu.unity** - five panels (Home, Character, Multiplayer, Settings, Controls),
+  character customiser with live preview, settings that persist, procedural audio.
+- **The Filament** - this game's contestant. Wide dome head, white eyes, cone nose,
+  and inside the dome a glowing wire whose brightness and steadiness encode standing
+  with Barnaby. Seven customisation categories, ~77k combinations, all primitives.
+- **Art** - Kenney CC0 packs (171 models) dress both scenes. Nothing commissioned,
+  nothing paid for, so the no-bespoke-art rule and the trademark check both hold.
 
-Repo: private, `harshit01/party`, pushed over the `github-party` SSH alias.
+### NEVER EXECUTED
+- **Steam.** No SteamAPI.Init, no lobby, no join code, not once. The code is written
+  and fails loudly rather than silently. It needs a SECOND STEAM ACCOUNT: Windows has
+  `hprishu`, the Mac needs a different one. This is the last of the four risks in
+  section 2 still completely unproven.
 
 ## 4. The host — built and proven
 
@@ -147,27 +169,43 @@ staring at a screen kills party pace.
 ## 5. Next steps
 
 **Founder (no dependency on code):**
-1. **Line up 2–3 friends to playtest with.** Now that the game is online and
-   keyboard-first, controllers are NO LONGER a blocker — but you cannot playtest a
-   party game alone, and remote testers are now the long pole instead.
-2. **Steamworks Partner account** — weeks of company/tax verification (W-8BEN-E;
-   the publisher has PAN/GST/Kotak already). Do NOT pay the $100 yet — it is per-title and
-   starts a 30-day clock that only helps near launch.
-3. **Private GitHub repo** under the the private org; push this folder (see §7).
+1. **Second Steam account** (new email, free). Windows already has `hprishu`; the Mac
+   needs a different one. New accounts are "limited" until $5 is spent and limited
+   accounts CANNOT ADD FRIENDS - so use the JOIN CODE path, which is already built and
+   works on a limited account.
+2. **Line up 2-3 friends to playtest.** Still the long pole. Nobody outside this machine
+   has played it.
+3. **Steamworks Partner account** - weeks of verification. Do NOT pay the $100 yet.
+4. **Rotate the OpenAI API key** if it was ever pasted into a chat transcript.
 
-**Build, in order** (full detail in `Docs/FIRST_STEPS_MAC.md`):
-0. ~~Git remote + Git LFS~~ **DONE.**
-1. ~~Unity project, 3D URP~~ **DONE.**
-2. ~~Pick and install the net stack~~ **DONE** — Mirror + FizzySteamworks, verified
-   compiling together by a headless build.
-2a. **FIRST MILESTONE - PROVE THE NETCODE.** Two machines, a Steam lobby, two
-   capsules moving on a flat plane in sync. Not a game. Netcode is now the biggest
-   technical risk and every concept in this project has been corrected by a cheap
-   test that should have run on day one.
-3. **"Red Light, Barnaby"** next (`Docs/MINIGAMES.md` #9). One button, no art, and
-   the host IS the mechanic — he calls GO/STOP, he is biased, and he lies. It proves
-   input, the round loop, host integration and latency in one slice.
-4. Round loop + scoring, then the rest of Family D, then Family A.
+**Build, in order:**
+0. ~~Git remote + LFS~~ **DONE**
+1. ~~Unity project, 3D URP~~ **DONE**
+2. ~~Net stack installed and compiling~~ **DONE**
+2a. ~~Prove the netcode locally~~ **DONE** - two processes, measured, tested
+2b. **PROVE STEAM P2P.** Two machines, a lobby, two Filaments in sync. Blocked only on
+    the second account. `Tools/build_verified.sh` produces the Windows-testable player.
+3. ~~Red Light, Barnaby~~ **DONE and playable**
+4. **Minigames #10 and #11** (`MINIGAMES.md` Family D). The docs put these next for a
+   reason: three cheap games answer "is this host actually fun?" far faster than one
+   polished one, and that question is the whole project. Currently ONE minigame exists
+   while the front end has had many passes.
+5. Round loop + scoring across minigames - the spine that turns games into a session.
+
+**How to run everything:**
+```bash
+# the host (leave running in its own terminal; needs OPENAI_API_KEY in ~/.zshrc)
+.venv/bin/python Server/hostserver.py
+curl -s http://127.0.0.1:8790/health          # expect {"ok": true, ...}
+
+# tests - Unity must be CLOSED, it locks the project
+./Tests/netcode_sync_test.sh
+./Tests/round_pacing_test.sh
+
+# builds - Unity must be CLOSED. Never call Unity's build method directly.
+./Tools/build_verified.sh
+```
+In the editor: open `Assets/_Party/Scenes/Menu.unity` and press Play.
 
 ## 6. Lessons that cost real time — do not re-learn them
 
@@ -184,7 +222,22 @@ staring at a screen kills party pace.
    model to parrot; it scored 100% while the game got worse.
 6. **Prove the risky thing before building the framework around it.** Both dropped
    concepts were disproven by a cheap test that should have run on day one.
-7. **Small models fail stacked NEGATIVE constraints.** gpt-4o-mini obeyed an
+7. **Unity's success signals mean nothing.** In one session it silently no-opped
+   `-importPackage`, exited 0 through compile errors, and reported `Succeeded` on builds
+   that produced a corrupt player. Verify the ARTIFACT, never the report. This is why
+   `BuildTools` calls `EditorApplication.Exit(1)` by hand and why `build_verified.sh`
+   boots the player before believing it.
+8. **Calibrate your own experiments, not just the game's tests.** Eight rounds went into
+   a build bug and produced four confident WRONG conclusions - cumulative isolation that
+   changed four things at once, comparisons between runs that used different scene files,
+   and a "it's flaky" call that was retracted then turned out right. The decisive clue
+   (a file size that differed on every build) was visible from round two and read past
+   twice. Change ONE thing, restore it, and re-run the same configuration before
+   believing any result.
+9. **For anything visual, get a reference image FIRST.** Three visual passes were spent
+   guessing at a look the founder could show in one screenshot. `Docs/ArtTarget/` exists
+   for this: agree the target, then build to it and compare.
+10. **Small models fail stacked NEGATIVE constraints.** gpt-4o-mini obeyed an
    anti-parrot rule ~75% of the time; gpt-4o reliably.
 
 ## 7. Moving machines
