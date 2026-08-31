@@ -33,7 +33,7 @@ import hashlib
 import json
 import os
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from openai import OpenAI
 
@@ -160,4 +160,25 @@ if __name__ == "__main__":
     print(f"    http://127.0.0.1:{PORT}/host/say")
     print(f"    model : {MODEL}")
     print(f"    (local only - the key never reaches the game binary){NL}")
-    HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    # THREADED, DELIBERATELY.
+    #
+    # HTTPServer handles one request at a time, and the whole design is to fire several
+    # beats WHILE the round is still playing (HANDOFF section 4 - pre-generation is not
+    # optional, five seconds of dead air kills party pace). Those prefetches therefore
+    # queued behind one another, each blocking on a live model call of 1.7-2.9s, so the
+    # third in line blew past HostVoice's 6s timeout.
+    #
+    # Measured on four concurrent beats, same timeout, only this line changed:
+    #   single-threaded : 2576ms, 4272ms, then TWO TIMEOUTS at 6s
+    #   threaded        : 2415-3122ms, four 200s
+    #
+    # In a real two-round session the server answered 200 to all seven POSTs while the
+    # GAME logged "Request timeout" and fell back to scripted stand-ins - the AI quietly
+    # vanishing exactly when several things happen at once, which is when it is needed.
+    # The failure was invisible from either side alone: the server log looked perfect.
+    #
+    # _cache is a plain dict: reads and writes are atomic under the GIL, and the worst
+    # race is two threads missing the same key and both calling the model once.
+    srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    srv.daemon_threads = True
+    srv.serve_forever()
