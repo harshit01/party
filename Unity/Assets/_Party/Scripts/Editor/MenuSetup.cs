@@ -410,91 +410,148 @@ namespace Party.EditorTools
         static GameObject BuildCharacter(Transform parent)
         {
             GameObject p = Panel(parent, "CharacterPanel");
-            Label(p.transform, "H", "YOUR FILAMENT", 34, TR, new Vector2(-64f, -240f),
-                  new Vector2(560f, 44f), TextAnchor.UpperRight, Accent);
-            Label(p.transform, "Blurb", "the glow shows how the host feels about you",
-                  19, TR, new Vector2(-64f, -284f), new Vector2(560f, 30f), TextAnchor.UpperRight, Dim);
+            Card(p.transform, new Vector2(-40f, 0f), new Vector2(560f, -120f));
 
-            _menu.nameField = Field(p.transform, "Name", "your name", TR, new Vector2(-64f, -324f), new Vector2(560f, 56f));
+            Head(p.transform, "YOUR CONTESTANT", -178f);
+            Label(p.transform, "Blurb", "the glow shows what the host thinks of you",
+                  18, TR, new Vector2(-64f, -222f), new Vector2(500f, 30f), TextAnchor.UpperRight, Dim);
 
-            float y = -396f;
+            _menu.nameField = Field(p.transform, "Name", "your name", TR,
+                                    new Vector2(-64f, -256f), new Vector2(500f, 58f));
+
+            float y = -336f;
             _menu.lookValues = new Text[MainMenu.RowCount];
-            for (int i = 0; i < MainMenu.RowCount; i++)
+            for (int i2 = 0; i2 < MainMenu.RowCount; i2++)
             {
-                _menu.lookValues[i] = LookRow(p.transform, MainMenu.RowCaption(i), i, y);
-                y -= 62f;
+                _menu.lookValues[i2] = LookRow(p.transform, MainMenu.RowCaption(i2), i2, y);
+                y -= 60f;
             }
-            VoidButton(p.transform, "RANDOMISE", TR, new Vector2(-64f, y - 6f), new Vector2(270f, 54f),
-                       new Color(0.35f, 0.30f, 0.55f), 22, nameof(MainMenu.Randomise));
-            Back(p.transform, y - 6f, -300f);
+
+            IntButton(p.transform, "Rand", "RANDOMISE", TR, new Vector2(-300f, y - 8f),
+                      new Vector2(236f, 56f), new Color(0.55f, 0.35f, 0.88f), 22,
+                      nameof(MainMenu.StepLook), -1);
+            VoidButton(p.transform, "RANDOMISE", TR, new Vector2(-300f, y - 8f),
+                       new Vector2(236f, 56f), new Color(0.55f, 0.35f, 0.88f), 22,
+                       nameof(MainMenu.Randomise));
+            Back(p.transform, y - 8f, 0f);
             return p;
         }
 
         static GameObject BuildSettings(Transform parent)
         {
             GameObject p = Panel(parent, "SettingsPanel");
-            Label(p.transform, "H", "SETTINGS", 34, TR, new Vector2(-64f, -240f),
-                  new Vector2(560f, 44f), TextAnchor.UpperRight, Accent);
-            float y = -310f;
-            _menu.volumeLabel      = SettingRow(p.transform, "Volume",      y, nameof(MainMenu.StepVolume));       y -= 70f;
-            _menu.qualityLabel     = SettingRow(p.transform, "Quality",     y, nameof(MainMenu.StepQuality));      y -= 70f;
-            _menu.fullscreenLabel  = SettingRow(p.transform, "Fullscreen",  y, nameof(MainMenu.ToggleFullscreen)); y -= 70f;
-            _menu.participantsLabel= SettingRow(p.transform, "Players",     y, nameof(MainMenu.StepParticipants)); y -= 70f;
-            _menu.hostVoiceLabel   = SettingRow(p.transform, "AI host",     y, nameof(MainMenu.ToggleHostVoice));  y -= 70f;
+            Card(p.transform, new Vector2(-40f, 0f), new Vector2(560f, -240f));
+            Head(p.transform, "SETTINGS", -178f);
+
+            float y = -250f;
+            _menu.volumeLabel       = SettingRow(p.transform, "VOLUME",     y, nameof(MainMenu.StepVolume));       y -= 76f;
+            _menu.qualityLabel      = SettingRow(p.transform, "QUALITY",    y, nameof(MainMenu.StepQuality));      y -= 76f;
+            _menu.fullscreenLabel   = SettingRow(p.transform, "FULLSCREEN", y, nameof(MainMenu.ToggleFullscreen)); y -= 76f;
+            _menu.participantsLabel = SettingRow(p.transform, "PLAYERS",    y, nameof(MainMenu.StepParticipants)); y -= 76f;
+            _menu.hostVoiceLabel    = SettingRow(p.transform, "AI HOST",    y, nameof(MainMenu.ToggleHostVoice));  y -= 74f;
+
             Label(p.transform, "HostNote",
-                  "Turn the host off to check the game still works without him.",
-                  17, TR, new Vector2(-64f, y), new Vector2(560f, 50f), TextAnchor.UpperRight, Dim);
-            Back(p.transform, y - 60f, 0f);
+                  "Turn the host off to check the game still stands up without him.",
+                  17, TR, new Vector2(-64f, y), new Vector2(500f, 60f), TextAnchor.UpperRight, Dim);
+            Back(p.transform, y - 64f, 0f);
             return p;
         }
 
         static GameObject BuildControls(Transform parent)
         {
             GameObject p = Panel(parent, "ControlsPanel");
-            Label(p.transform, "H", "CONTROLS", 34, TR, new Vector2(-64f, -240f),
-                  new Vector2(560f, 44f), TextAnchor.UpperRight, Accent);
-            string body =
-                "MOVE\n" +
-                "   W A S D   or   Arrow Keys\n" +
-                "   Left stick on a gamepad\n\n" +
-                "THAT IS THE WHOLE CONTROL SCHEME.\n" +
-                "Two action buttons maximum is a hard rule,\n" +
-                "and Red Light does not need either of them.\n\n" +
-                "Move on GO. Freeze on STOP.\n" +
-                "Barnaby is biased and he lies.";
-            Label(p.transform, "Body", body, 22, TR, new Vector2(-64f, -300f),
-                  new Vector2(560f, 420f), TextAnchor.UpperRight, Ink);
-            Back(p.transform, -740f, 0f);
+            Card(p.transform, new Vector2(-40f, 0f), new Vector2(560f, -300f));
+            Head(p.transform, "CONTROLS", -178f);
+
+            // WASD cluster drawn as key caps.
+            Key(p.transform, "W", new Vector2(-330f, -256f));
+            Key(p.transform, "A", new Vector2(-398f, -324f));
+            Key(p.transform, "S", new Vector2(-330f, -324f));
+            Key(p.transform, "D", new Vector2(-262f, -324f));
+            Label(p.transform, "MoveCap", "MOVE", 26, TR, new Vector2(-64f, -286f),
+                  new Vector2(190f, 34f), TextAnchor.MiddleLeft, Ink);
+            Label(p.transform, "MoveAlt", "arrow keys  ·  left stick", 18, TR,
+                  new Vector2(-64f, -316f), new Vector2(220f, 28f), TextAnchor.MiddleLeft, Dim);
+
+            Label(p.transform, "Body",
+                  "That is the whole control scheme.\n\n" +
+                  "Two action buttons maximum is a hard rule,\n" +
+                  "and Red Light needs neither of them.\n\n" +
+                  "Move on GO.  Freeze on STOP.\n" +
+                  "Barnaby is biased, and he lies.",
+                  21, TR, new Vector2(-64f, -400f), new Vector2(500f, 300f),
+                  TextAnchor.UpperRight, Ink);
+            Back(p.transform, -706f, 0f);
             return p;
+        }
+
+        static void Key(Transform parent, string cap, Vector2 pos)
+        {
+            GameObject k = UI("Key" + cap, parent);
+            Place(k, TR, pos, new Vector2(58f, 58f));
+            Image i = k.AddComponent<Image>();
+            i.sprite = _bubble; i.type = Image.Type.Sliced;
+            i.pixelsPerUnitMultiplier = 2.6f;
+            i.color = new Color(1f, 1f, 1f, 0.22f);
+            Text t = Label(k.transform, "T", cap, 26, new Vector2(0.5f, 0.5f), Vector2.zero,
+                           new Vector2(58f, 58f), TextAnchor.MiddleCenter, Ink);
+            t.font = _display;
+            Place(t.gameObject, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(58f, 58f));
         }
 
         static GameObject BuildMultiplayer(Transform parent)
         {
             GameObject p = Panel(parent, "MultiplayerPanel");
-            Label(p.transform, "H", "MULTIPLAYER", 34, TR, new Vector2(-64f, -240f),
-                  new Vector2(560f, 44f), TextAnchor.UpperRight, Accent);
+            Card(p.transform, new Vector2(-40f, 0f), new Vector2(560f, -260f));
+            Head(p.transform, "MULTIPLAYER", -178f);
 
-            _menu.steamHostButton = VoidButton(p.transform, "HOST ON STEAM", TR, new Vector2(-64f, -300f),
-                                               new Vector2(560f, 74f), new Color(0.20f, 0.45f, 0.75f), 26,
-                                               nameof(MainMenu.HostOnSteam));
-            Label(p.transform, "CodeNote", "you get a 5-letter join code to share", 17, TR,
-                  new Vector2(-64f, -380f), new Vector2(560f, 28f), TextAnchor.UpperRight, Dim);
+            _menu.steamHostButton = VoidButton(p.transform, "HOST ON STEAM", TR,
+                new Vector2(-64f, -244f), new Vector2(500f, 78f),
+                new Color(0.13f, 0.44f, 0.78f), 26, nameof(MainMenu.HostOnSteam));
+            Label(p.transform, "CodeNote", "you get a 5-letter code to share", 17, TR,
+                  new Vector2(-64f, -330f), new Vector2(500f, 28f), TextAnchor.UpperRight, Dim);
 
             _menu.joinCodeField = Field(p.transform, "JoinCode", "JOIN CODE", TR,
-                                        new Vector2(-244f, -416f), new Vector2(380f, 60f));
-            _menu.steamJoinButton = VoidButton(p.transform, "JOIN", TR, new Vector2(-64f, -416f),
-                                               new Vector2(168f, 60f), new Color(0.25f, 0.55f, 0.40f), 24,
-                                               nameof(MainMenu.JoinByCode));
+                                        new Vector2(-244f, -364f), new Vector2(320f, 62f));
+            _menu.steamJoinButton = VoidButton(p.transform, "JOIN", TR, new Vector2(-64f, -364f),
+                new Vector2(170f, 62f), new Color(0.08f, 0.62f, 0.46f), 24, nameof(MainMenu.JoinByCode));
 
             _menu.joinAddressField = Field(p.transform, "JoinAddr", "localhost", TR,
-                                           new Vector2(-244f, -492f), new Vector2(380f, 56f));
-            VoidButton(p.transform, "DIRECT", TR, new Vector2(-64f, -492f), new Vector2(168f, 56f),
-                       new Color(0.33f, 0.33f, 0.40f), 22, nameof(MainMenu.JoinByAddress));
+                                           new Vector2(-244f, -444f), new Vector2(320f, 58f));
+            VoidButton(p.transform, "DIRECT", TR, new Vector2(-64f, -444f), new Vector2(170f, 58f),
+                       new Color(0.34f, 0.36f, 0.46f), 22, nameof(MainMenu.JoinByAddress));
 
-            _menu.steamLabel = Label(p.transform, "SteamStatus", "", 18, TR, new Vector2(-64f, -566f),
-                                     new Vector2(560f, 70f), TextAnchor.UpperRight, new Color(1f, 0.6f, 0.55f));
-            Back(p.transform, -650f, 0f);
+            _menu.steamLabel = Label(p.transform, "SteamStatus", "", 18, TR,
+                                     new Vector2(-64f, -524f), new Vector2(500f, 90f),
+                                     TextAnchor.UpperRight, new Color(1f, 0.62f, 0.56f));
+            Back(p.transform, -628f, 0f);
             return p;
+        }
+
+        /// <summary>Rounded glass card behind a panel's contents.</summary>
+        static void Card(Transform parent, Vector2 pos, Vector2 size)
+        {
+            GameObject c = UI("Card", parent);
+            RectTransform rt = c.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(1f, 0f); rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 0.5f);
+            rt.anchoredPosition = pos; rt.sizeDelta = size;
+            Image i = c.AddComponent<Image>();
+            i.sprite = _bubble; i.type = Image.Type.Sliced;
+            i.pixelsPerUnitMultiplier = 0.9f;
+            i.color = new Color(0.07f, 0.20f, 0.44f, 0.62f);
+            i.raycastTarget = false;
+            c.transform.SetAsFirstSibling();
+        }
+
+        static void Head(Transform parent, string text, float y)
+        {
+            Text t = Label(parent, "Head", text, 36, TR, new Vector2(-64f, y),
+                           new Vector2(500f, 46f), TextAnchor.UpperRight, Accent);
+            t.font = _display;
+            var o = t.gameObject.AddComponent<Outline>();
+            o.effectColor = new Color(0.12f, 0.06f, 0.20f, 0.95f);
+            o.effectDistance = new Vector2(3f, -3f);
         }
 
         // ---------- widgets ----------
