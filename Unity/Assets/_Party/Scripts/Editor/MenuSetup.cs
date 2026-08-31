@@ -315,6 +315,11 @@ namespace Party.EditorTools
                     out _, out _);
             }
 
+            // REAL PROPS (Kenney, CC0) dressing the arena. The Filament stays the
+            // character - these are set dressing only, so the hero keeps a distinctive
+            // silhouette while the world stops being bare primitives.
+            DressArena(stage.transform);
+
             // lighting truss above the lane
             Box(stage.transform, "Truss", new Vector3(0f, 11.5f, 30f), new Vector3(30f, 0.6f, 0.6f), trussM);
             for (int i = -1; i <= 1; i++)
@@ -371,6 +376,59 @@ namespace Party.EditorTools
 
             ms.pulseLights = new[] { sl };
             ms.pulseAmount = 0.04f; ms.pulseSpeed = 0.5f;
+        }
+
+        /// <summary>Places CC0 kit props along the arena. Set dressing only.</summary>
+        static void DressArena(Transform parent)
+        {
+            GameObject dress = new GameObject("Dressing");
+            dress.transform.SetParent(parent, false);
+
+            // Fence lines the lane on both sides.
+            for (int side = -1; side <= 1; side += 2)
+                for (int i = 0; i < 12; i++)
+                    Kit(dress.transform, "fence-straight",
+                        new Vector3(side * 9.2f, -2.8f, 8f + i * 4.4f),
+                        Quaternion.Euler(0f, 90f, 0f), 2.2f);
+
+            // Crates and barrels stacked at the edges - instant lived-in detail.
+            (string n, Vector3 pos, float rot)[] clutter =
+            {
+                ("crate",        new Vector3(-11.4f, -2.8f, 12f), 18f),
+                ("crate-strong", new Vector3(-11.4f, -1.6f, 12f), -24f),
+                ("crate",        new Vector3(-12.6f, -2.8f, 16f), 42f),
+                ("barrel",       new Vector3( 11.6f, -2.8f, 14f), 0f),
+                ("barrel",       new Vector3( 12.4f, -2.8f, 17f), 30f),
+                ("crate-item",   new Vector3( 11.2f, -2.8f, 21f), -12f),
+                ("crate",        new Vector3(-11.8f, -2.8f, 30f), 8f),
+                ("barrel",       new Vector3( 11.9f, -2.8f, 34f), 55f),
+            };
+            foreach (var c in clutter)
+                Kit(dress.transform, c.n, c.pos, Quaternion.Euler(0f, c.rot, 0f), 2.4f);
+
+            // Flags on poles flanking the finish.
+            Kit(dress.transform, "flag", new Vector3(-9.4f, -2.8f, 56f), Quaternion.Euler(0f, 20f, 0f), 3.0f);
+            Kit(dress.transform, "flag", new Vector3( 9.4f, -2.8f, 56f), Quaternion.Euler(0f, -20f, 0f), 3.0f);
+
+            // Gold coins floating over the lane - reads as a game, and it is a hook for
+            // scoring later.
+            for (int i = 0; i < 5; i++)
+                Kit(dress.transform, "coin-gold",
+                    new Vector3(-3f + i * 1.5f, -1.2f, 26f + (i % 2) * 3f),
+                    Quaternion.Euler(0f, 25f * i, 0f), 2.0f);
+        }
+
+        static void Kit(Transform parent, string modelName, Vector3 pos, Quaternion rot, float scale)
+        {
+            string path = $"Assets/_Party/Art/Kenney/Kit/{modelName}.fbx";
+            GameObject src = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (src == null) { Debug.LogWarning($"[Party] kit model missing: {modelName}"); return; }
+            GameObject g = (GameObject)PrefabUtility.InstantiatePrefab(src);
+            g.transform.SetParent(parent, false);
+            g.transform.position = pos;
+            g.transform.rotation = rot;
+            g.transform.localScale = Vector3.one * scale;
+            foreach (var col in g.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(col);
         }
 
         // -- primitive helpers --
