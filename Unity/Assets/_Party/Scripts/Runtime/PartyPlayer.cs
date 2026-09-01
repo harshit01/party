@@ -105,6 +105,13 @@ namespace Party
         IMoveInput  _input;      // host-side only
         Vector2     _pendingMove; // last input received for this player, host-side
 
+        /// <summary>
+        /// Discrete actions for "Say What He Says" (#10). Separate from IMoveInput because
+        /// that one answers "which way are you leaning" every frame, and this one answers
+        /// "did you just press something" - a held key must produce exactly one step.
+        /// </summary>
+        SayWhat.IActionInput _actions;
+
         void Awake()
         {
             _rb = GetComponent<Rigidbody>();
@@ -117,9 +124,15 @@ namespace Party
             // Bot policy is per-minigame. Red Light needs freeze-on-stop behaviour;
             // without a director (the bare netcode scene) they just wander.
             if (isBot)
+            {
                 _input = RedLight.RedLightDirector.Instance != null
                     ? new RedLight.RedLightBotInput(transform)
                     : (IMoveInput)new BotMoveInput(transform);
+
+                // Bot policy is per-minigame. #10 needs recall, not steering.
+                if (SayWhat.SayWhatDirector.Instance != null)
+                    _actions = new SayWhat.SayWhatBotInput();
+            }
         }
 
         public override void OnStartClient()
@@ -155,6 +168,19 @@ namespace Party
 
             _input ??= Autopilot ? new BotMoveInput(transform) : (IMoveInput)new LocalMoveInput();
             CmdMove(_input.Move);
+
+            // "Say What He Says": send discrete actions as they are pressed. Autopilot
+            // drives them with the bot policy so a headless build exercises the real
+            // input -> CmdPerform -> server path, exactly as -partyautopilot does for
+            // movement; without it a human slot never performs and a broken input path
+            // would pass a test unnoticed.
+            if (SayWhat.SayWhatDirector.Instance == null) return;
+            _actions ??= Autopilot
+                ? new SayWhat.SayWhatBotInput()
+                : (SayWhat.IActionInput)new SayWhat.LocalActionInput();
+
+            SayWhat.PartyAction a = _actions.Poll();
+            if (a != SayWhat.PartyAction.None) CmdPerform((byte)a);
         }
 
         [Command(channel = Channels.Unreliable)]
@@ -162,6 +188,29 @@ namespace Party
         {
             // Never trust a client's magnitude.
             _pendingMove = Vector2.ClampMagnitude(move, 1f);
+        }
+
+        [Command(channel = Channels.Reliable)]
+        void CmdPerform(byte action)
+        {
+            // RELIABLE, unlike CmdMove. A dropped movement packet is a missed frame; a
+            // dropped action is a step of the sequence you are then judged on.
+            SayWhat.SayWhatDirector d = SayWhat.SayWhatDirector.Instance;
+            if (d == null) return;
+            if (action == 0 || action > (byte)SayWhat.PartyAction.Bow) return;   // never trust a client
+            d.SubmitAction(this, (SayWhat.PartyAction)action);
+        }
+
+        /// <summary>Bots have no connection, so the server polls their actions directly.</summary>
+        [Server]
+        void ServerPollBotActions()
+        {
+            if (!isBot || _actions == null) return;
+            SayWhat.SayWhatDirector d = SayWhat.SayWhatDirector.Instance;
+            if (d == null) return;
+
+            SayWhat.PartyAction a = _actions.Poll();
+            if (a != SayWhat.PartyAction.None) d.SubmitAction(this, a);
         }
 
         [Server]
@@ -177,6 +226,8 @@ namespace Party
         void FixedUpdate()
         {
             if (!isServer) return;   // host-authoritative: only the host integrates physics
+
+            ServerPollBotActions();
 
             // Bots produce their input here; humans' arrived via CmdMove.
             if (isBot && _input != null) _pendingMove = _input.Move;

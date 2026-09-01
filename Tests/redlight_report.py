@@ -16,8 +16,14 @@ import re
 import sys
 from collections import defaultdict
 
+# NOTE the non-greedy (.+?) for the outcome, NOT (\S+).
+# Outcomes embed a player name, and a human slot is called "Player 0" - with a space.
+# (\S+) stopped at that space, the line failed to match, and the round was silently
+# dropped: a log with one such round reported 15 checks as 5. Every bot name happens to
+# be one word, so this only ever bit when a HUMAN won, which is exactly the case a
+# headless bot-only test never produces.
 END_RE   = re.compile(
-    r"\[RedLight\] ROUND (\d+) END outcome=(\S+) stops=(\d+) "
+    r"\[RedLight\] ROUND (\d+) END outcome=(.+?) stops=(\d+) "
     r"eliminated=(\d+) spared=(\d+) framed=(\d+)")
 STAND_RE = re.compile(r"\[RedLight\] STANDINGS round=(\d+)(.*)")
 PAIR_RE  = re.compile(r"\| ([^=|]+)=(-?\d+\.\d+)\(([a-z]+)\)")

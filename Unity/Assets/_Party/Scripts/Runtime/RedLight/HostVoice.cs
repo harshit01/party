@@ -24,6 +24,20 @@ namespace Party.RedLight
         public string endpoint = "http://127.0.0.1:8790/host/say";
         public float timeoutSeconds = 6f;
 
+        /// <summary>
+        /// Which minigame is being narrated. Set per scene.
+        ///
+        /// This used to be the literal string "Red Light, Barnaby" inside PrefetchRoundIntro
+        /// and the round number was read off RedLightDirector.Instance - which is null in
+        /// every other minigame, so #10 would have told the host it was introducing Red
+        /// Light and filed its history under "Round :". The host's memory across the night
+        /// is the product (HANDOFF.md §4); it cannot be wired to one scene.
+        /// </summary>
+        public string gameName = "Red Light, Barnaby";
+
+        /// <summary>Set by whichever director owns the round, so history is labelled right.</summary>
+        public static int CurrentRound;
+
         /// <summary>Most recent line Barnaby has ready. Empty until one arrives.</summary>
         public static string Latest { get; private set; } = "";
         public static bool ServiceHealthy { get; private set; } = true;
@@ -32,14 +46,17 @@ namespace Party.RedLight
         readonly List<string> _history = new List<string>();
 
         public void PrefetchRoundIntro(int round, IEnumerable<PartyPlayer> players)
-            => Send("intro", players, justHappened: null, nextGame: "Red Light, Barnaby");
+        {
+            CurrentRound = round;
+            Send("intro", players, justHappened: null, nextGame: gameName);
+        }
 
         public void PrefetchCallout(string who, bool framed, IEnumerable<PartyPlayer> players)
         {
             string what = framed
                 ? $"{who} did NOT move, but Barnaby called them out anyway"
                 : $"{who} moved during a stop and is out";
-            _history.Add($"Round {RedLightDirector.Instance?.round}: {what}");
+            _history.Add($"Round {CurrentRound}: {what}");
             Send("reaction", players, justHappened: what, nextGame: null);
         }
 

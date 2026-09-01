@@ -45,6 +45,11 @@ namespace Party.EditorTools
             Run(BuildTarget.StandaloneOSX, "Build/MacRedLight/Party.app",
                 "Assets/_Party/Scenes/RedLight.unity");
 
+        /// <summary>Say What He Says (#10) only - used by its headless round test.</summary>
+        public static void BuildMacSayWhat() =>
+            Run(BuildTarget.StandaloneOSX, "Build/MacSayWhat/Party.app",
+                "Assets/_Party/Scenes/SayWhat.unity");
+
         [MenuItem("Party/Build/Windows x64")]
         public static void BuildWindows() => Run(BuildTarget.StandaloneWindows64, "Build/Windows/Party.exe");
 

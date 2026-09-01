@@ -125,16 +125,40 @@ namespace Party
             if (_roundMode) PumpRounds();
         }
 
-        /// <summary>Kick off a Red Light round from the command line, for headless testing.</summary>
+        /// <summary>
+        /// Kick off a round from the command line, for headless testing.
+        ///
+        /// WHICHEVER MINIGAME IS IN THE SCENE. This used to reach straight for
+        /// RedLightDirector, which meant a second minigame could not be tested headlessly
+        /// at all - and headless testing is the only way anything in this project has ever
+        /// been believed.
+        /// </summary>
         void BeginRound()
         {
-            var d = RedLight.RedLightDirector.Instance;
-            if (d == null) { Debug.LogError("[AutoRun] -partyround but no RedLightDirector in scene"); return; }
             _roundsDone++;
             _nextRoundAt = -1f;
             Debug.Log($"[AutoRun] beginning round {_roundsDone}/{_roundsWanted}");
-            d.BeginRound();
+
+            if (RedLight.RedLightDirector.Instance != null)
+            { RedLight.RedLightDirector.Instance.BeginRound(); return; }
+            if (SayWhat.SayWhatDirector.Instance != null)
+            { SayWhat.SayWhatDirector.Instance.BeginRound(); return; }
+
+            Debug.LogError("[AutoRun] -partyround but no director in the scene");
         }
+
+        /// <summary>True when the scene's director has finished its round.</summary>
+        bool RoundFinished()
+        {
+            if (RedLight.RedLightDirector.Instance != null)
+                return RedLight.RedLightDirector.Instance.phase == RedLight.RoundPhase.Finished;
+            if (SayWhat.SayWhatDirector.Instance != null)
+                return SayWhat.SayWhatDirector.Instance.phase == SayWhat.SayWhatPhase.Finished;
+            return false;
+        }
+
+        bool HasDirector =>
+            RedLight.RedLightDirector.Instance != null || SayWhat.SayWhatDirector.Instance != null;
 
         /// <summary>
         /// Chain rounds back to back so one process plays a SESSION, not a single round.
@@ -145,9 +169,8 @@ namespace Party
         /// </summary>
         void PumpRounds()
         {
-            var d = RedLight.RedLightDirector.Instance;
-            if (d == null) return;
-            if (d.phase != RedLight.RoundPhase.Finished) return;
+            if (!HasDirector) return;
+            if (!RoundFinished()) return;
 
             if (_roundsDone >= _roundsWanted)
             {
@@ -182,6 +205,11 @@ namespace Party
             if (dir != null)
                 sb.Append(" phase=").Append(dir.phase)
                   .Append(" call=\"").Append(dir.callText).Append('"');
+            var sw = SayWhat.SayWhatDirector.Instance;
+            if (sw != null)
+                sb.Append(" phase=").Append(sw.phase)
+                  .Append(" seq=").Append(sw.sequenceNumber)
+                  .Append(" call=\"").Append(sw.callText).Append('"');
 
             System.Array.Sort(all, (x, y) => string.CompareOrdinal(x.displayName, y.displayName));
             foreach (PartyPlayer p in all)
