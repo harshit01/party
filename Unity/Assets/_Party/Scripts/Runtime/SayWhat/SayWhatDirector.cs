@@ -188,6 +188,20 @@ namespace Party.SayWhat
 
             if (phase == SayWhatPhase.Waiting || phase == SayWhatPhase.Finished) return;
 
+            // THE TIME LIMIT IS CHECKED EVERY FRAME, not only between sequences.
+            //
+            // It used to be tested inside NextOrFinish, which only runs after a Judge
+            // phase completes - so a round that entered a 7-step sequence just under the
+            // limit ran the whole Watch and Perform before noticing. Measured across 8
+            // rounds: one ran 106 seconds against a 90 second cap, and MINIGAMES.md opens
+            // with "30-60 seconds". A cap that is only enforced at convenient moments is
+            // not a cap.
+            if (NetworkTime.time >= _roundEndsAt)
+            {
+                ForceFinishOnTime();
+                return;
+            }
+
             // Reveal the sequence one beat at a time so it is watchable rather than a wall
             // of text - and so a player can be caught out by the LAST step, which is where
             // the tension is.
@@ -350,6 +364,34 @@ namespace Party.SayWhat
             Debug.Log($"[SayWhat] {p.displayName} out ({reason}, matched={matched}/{_sequence.Count}, " +
                       $"standing={standing})");
             if (_voice != null) _voice.PrefetchCallout(p.displayName, reason == "framed", Players());
+        }
+
+        /// <summary>
+        /// Out of time mid-sequence. Whoever is still standing takes it; if several are,
+        /// the one who has recalled most this round does - never an arbitrary first-found,
+        /// which is the bug that made "who came last" meaningless.
+        /// </summary>
+        [Server] void ForceFinishOnTime()
+        {
+            PartyPlayer best = null;
+            foreach (PartyPlayer p in Players())
+            {
+                if (p.eliminated) continue;
+                if (best == null) { best = p; continue; }
+                _submitted.TryGetValue(p.netId, out List<PartyAction> a);
+                _submitted.TryGetValue(best.netId, out List<PartyAction> b);
+                if (Matched(a) > Matched(b)) best = p;
+            }
+
+            if (best != null)
+            {
+                best.finished = true;
+                best.placement = 1;
+                verdictText = $"Time! {best.displayName} was still standing.";
+                if (_voice != null) _voice.PrefetchFinale(best.displayName, Players());
+            }
+            SetPhase(SayWhatPhase.Finished, 0f);
+            Summarise("timeout:" + (best != null ? best.displayName : "nobody"));
         }
 
         [Server] void NextOrFinish()
