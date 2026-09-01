@@ -74,6 +74,26 @@ namespace Party
             ApplyColour();
         }
 
+        /// <summary>
+        /// Finishing position once the round is over. 1 = won, higher = knocked out
+        /// earlier, 0 = still in.
+        ///
+        /// MINIGAMES.md is explicit that "a clear winner AND a clear loser" is a design
+        /// rule and that THE LOSER MATTERS MORE, because the loser is what the host mocks.
+        /// Until now nothing recorded who came last - `eliminated` is a boolean, so by the
+        /// end of a round four people were equally "out" and the wooden spoon was
+        /// unknowable. #11 "The Prediction" is a bet on exactly that, and the scoring
+        /// spine needs it too.
+        /// </summary>
+        [SyncVar] public int placement;
+
+        /// <summary>
+        /// Points across the session. #11 "The Prediction" awards them, and the round loop
+        /// will carry them between minigames - a collection of games is not a session
+        /// until something persists across them.
+        /// </summary>
+        [SyncVar] public int score;
+
         /// <summary>Called out by Barnaby - fairly or otherwise. Cannot move.</summary>
         [SyncVar(hook = nameof(OnStateChanged))]  public bool   eliminated;
         /// <summary>Crossed the line.</summary>
@@ -149,6 +169,13 @@ namespace Party
         /// client reads no devices and its capsule sits still, which would let a broken
         /// input path pass a sync test unnoticed.
         /// </summary>
+        /// <summary>
+        /// TEST ONLY. Exposed so the Prediction wrapper can make autopilot humans bet
+        /// like bots - otherwise the human slot never places a bet and a headless test
+        /// exercises the betting path for nobody.
+        /// </summary>
+        public static bool AutopilotEnabled => Autopilot;
+
         static bool? _autopilot;
         static bool Autopilot
         {
@@ -188,6 +215,16 @@ namespace Party
         {
             // Never trust a client's magnitude.
             _pendingMove = Vector2.ClampMagnitude(move, 1f);
+        }
+
+        /// <summary>Place a secret bet on who comes last (#11). Reliable: it is a decision.</summary>
+        [Command(channel = Channels.Reliable)]
+        public void CmdBet(uint targetNetId)
+        {
+            Prediction.PredictionDirector d = Prediction.PredictionDirector.Instance;
+            if (d == null) return;
+            foreach (PartyPlayer p in Prediction.PredictionDirector.Players())
+                if (p.netId == targetNetId) { d.PlaceBet(this, p); return; }
         }
 
         [Command(channel = Channels.Reliable)]

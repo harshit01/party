@@ -139,6 +139,11 @@ namespace Party
             _nextRoundAt = -1f;
             Debug.Log($"[AutoRun] beginning round {_roundsDone}/{_roundsWanted}");
 
+            // PREDICTION FIRST. #11 wraps a minigame rather than being one, so when it
+            // is present it owns the round and starts the inner game itself. Starting the
+            // inner game directly would skip the betting entirely.
+            if (Prediction.PredictionDirector.Instance != null)
+            { Prediction.PredictionDirector.Instance.BeginRound(); return; }
             if (RedLight.RedLightDirector.Instance != null)
             { RedLight.RedLightDirector.Instance.BeginRound(); return; }
             if (SayWhat.SayWhatDirector.Instance != null)
@@ -150,6 +155,8 @@ namespace Party
         /// <summary>True when the scene's director has finished its round.</summary>
         bool RoundFinished()
         {
+            if (Prediction.PredictionDirector.Instance != null)
+                return Prediction.PredictionDirector.Instance.phase == Prediction.PredictionPhase.Finished;
             if (RedLight.RedLightDirector.Instance != null)
                 return RedLight.RedLightDirector.Instance.phase == RedLight.RoundPhase.Finished;
             if (SayWhat.SayWhatDirector.Instance != null)
@@ -158,7 +165,9 @@ namespace Party
         }
 
         bool HasDirector =>
-            RedLight.RedLightDirector.Instance != null || SayWhat.SayWhatDirector.Instance != null;
+            Prediction.PredictionDirector.Instance != null ||
+            RedLight.RedLightDirector.Instance != null ||
+            SayWhat.SayWhatDirector.Instance != null;
 
         /// <summary>
         /// Chain rounds back to back so one process plays a SESSION, not a single round.

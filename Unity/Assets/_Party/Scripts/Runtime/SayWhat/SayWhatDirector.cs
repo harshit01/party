@@ -32,8 +32,13 @@ namespace Party.SayWhat
     /// a client cannot read ahead - which matters because two of the founder's reference
     /// games (Codenames, The Chameleon) are exactly about who knows what.
     /// </summary>
-    public class SayWhatDirector : NetworkBehaviour
+    public class SayWhatDirector : NetworkBehaviour, IMinigameDirector
     {
+        // ---- IMinigameDirector: the seam the spine and #11 drive minigames through ----
+        public bool   RoundIsOver => phase == SayWhatPhase.Finished;
+        public string GameName    => "Say What He Says";
+        public System.Collections.Generic.IEnumerable<PartyPlayer> Participants => Players();
+
         [Header("Sequence")]
         [Tooltip("Steps in the first sequence of a round.")]
         public int startLength = 3;
@@ -77,6 +82,8 @@ namespace Party.SayWhat
         double _roundEndsAt;
         double _roundStartedAt;
         int    _spares, _frames, _outs;
+        /// <summary>Next finishing position to hand out, counting DOWN from last place.</summary>
+        int    _nextPlace;
         double _nextStandingPush;
 
         public IReadOnlyList<PartyAction> Sequence => _sequence;
@@ -144,10 +151,14 @@ namespace Party.SayWhat
             if (round > 1) _bias?.Decay(0.10f);
             _bias?.EnsureFavouriteAndTarget(Players(), 0.4f, -0.4f);
 
+            _nextPlace = 0;
+            foreach (PartyPlayer p in Players()) _nextPlace++;   // last place = participant count
+
             foreach (PartyPlayer p in Players())
             {
                 p.eliminated = false;
                 p.finished   = false;
+                p.placement  = 0;
             }
 
             verdictText = "";
@@ -246,6 +257,22 @@ namespace Party.SayWhat
 
         [Server] void JudgeAll()
         {
+            // WHO CAME LAST MUST NOT BE DECIDED BY ITERATION ORDER.
+            //
+            // Several players routinely go out on the SAME sequence, and placements were
+            // handed out in whatever order FindObjectsByType returned - so the wooden
+            // spoon went to whoever happened to be first in an array. Measured: one round
+            // eliminated Player 0 on matched=1/3 and Fenwick on matched=3/3 (perfect, and
+            // FRAMED) in the same pass, and the perfect performance placed lower purely
+            // by position in the list.
+            //
+            // It matters because #11 "The Prediction" is a bet on precisely this, and
+            // MINIGAMES.md says the loser matters more than the winner. So everyone
+            // failing the same sequence is ranked by how much they actually recalled,
+            // worst first, and a player Barnaby framed - who was RIGHT - is never ranked
+            // below someone who genuinely fumbled it.
+            var casualties = new List<(PartyPlayer p, int matched, string reason)>();
+
             foreach (PartyPlayer p in Players())
             {
                 if (p.eliminated || p.finished) continue;
@@ -277,10 +304,15 @@ namespace Party.SayWhat
                     continue;
                 }
 
-                if (!perfect) { Eliminate(p, "wrong", matched); continue; }
+                if (!perfect) { casualties.Add((p, matched, "wrong")); continue; }
 
-                if (_bias.WouldFrame(p.netId)) Eliminate(p, "framed", matched);
+                if (_bias.WouldFrame(p.netId)) casualties.Add((p, matched, "framed"));
             }
+
+            // Worst recall goes out lowest. A framed player matched everything, so this
+            // ranks them above the fumblers automatically.
+            casualties.Sort((a, b) => a.matched.CompareTo(b.matched));
+            foreach (var c in casualties) Eliminate(c.p, c.reason, c.matched);
 
             SetPhase(SayWhatPhase.Judge, judgeSeconds);
         }
@@ -305,6 +337,9 @@ namespace Party.SayWhat
             string standing = _bias.Describe(p.netId);
 
             p.eliminated = true;
+            // First out is LAST place - MINIGAMES.md says the loser matters more than the
+            // winner, and #11 is a bet on precisely who that is.
+            p.placement = _nextPlace > 0 ? _nextPlace-- : 0;
             _outs++;
             if (reason == "framed") { _frames++; _bias.Nudge(p.netId, +0.15f); }
 
@@ -327,6 +362,7 @@ namespace Party.SayWhat
             if (alive == 1)
             {
                 last.finished = true;
+                last.placement = 1;
                 _bias.Nudge(last.netId, -0.15f);   // leading is not endearing
                 verdictText = $"{last.displayName} remembered. Everyone else did not.";
                 SetPhase(SayWhatPhase.Finished, 0f);
@@ -352,6 +388,7 @@ namespace Party.SayWhat
                 if (best != null)
                 {
                     best.finished = true;
+                    best.placement = 1;
                     verdictText = $"Time! {best.displayName} was still standing.";
                     if (_voice != null) _voice.PrefetchFinale(best.displayName, Players());
                 }
@@ -369,6 +406,12 @@ namespace Party.SayWhat
             // MINIGAMES.md opens with "2-8 players, one screen, 30-60 seconds" - a round
             // that ends in 20s has not given the host enough to work with, and one that
             // runs to 90s is not a party minigame any more.
+            var order = new List<PartyPlayer>(Players());
+            order.Sort((a, b) => a.placement.CompareTo(b.placement));
+            var ob = new StringBuilder("[SayWhat] PLACEMENTS");
+            foreach (PartyPlayer p in order) ob.Append($" | {p.placement}:{p.displayName}");
+            Debug.Log(ob.ToString());
+
             double secs = NetworkTime.time - _roundStartedAt;
             Debug.Log($"[SayWhat] ROUND {round} END outcome={outcome} sequences={sequenceNumber} " +
                       $"eliminated={_outs} spared={_spares} framed={_frames} seconds={secs:F1}");

@@ -25,8 +25,13 @@ namespace Party.RedLight
     /// snapshot taken. The window is the interpolation buffer plus each player's own
     /// round-trip time, so a laggier player gets more slack, not less.
     /// </summary>
-    public class RedLightDirector : NetworkBehaviour
+    public class RedLightDirector : NetworkBehaviour, IMinigameDirector
     {
+        // ---- IMinigameDirector: the seam the spine and #11 drive minigames through ----
+        public bool   RoundIsOver => phase == RoundPhase.Finished;
+        public string GameName    => "Red Light, Barnaby";
+        public System.Collections.Generic.IEnumerable<PartyPlayer> Participants => Players();
+
         [Header("Course")]
         // COURSE LENGTH IS A TIMING DECISION, NOT A LAYOUT ONE.
         // The original course was 26 units - about 3.7s at the 7 m/s cap - while a single
@@ -71,6 +76,8 @@ namespace Party.RedLight
         bool   _snapshotTaken;
         double _judgeAt;
         int    _stopsThisRound, _spares, _frames;
+        /// <summary>Next finishing position to hand out, counting DOWN from last place.</summary>
+        int    _nextPlace;
         double _roundEndsAt;
         double _nextStandingPush;
 
@@ -128,10 +135,14 @@ namespace Party.RedLight
             // twitches. Floor the warmest player and cap the coldest so both halves of
             // the mechanic can always fire.
             _bias?.EnsureFavouriteAndTarget(Players(), 0.4f, -0.4f);
+            _nextPlace = 0;
+            foreach (PartyPlayer p in Players()) _nextPlace++;   // last place = participant count
+
             foreach (PartyPlayer p in Players())
             {
                 p.eliminated = false;
                 p.finished   = false;
+                p.placement  = 0;
                 p.ServerTeleport(new Vector3(Random.Range(-6f, 6f), 1.1f, startZ));
                 p.GetComponent<Juice.PlayerJuice>()?.ResetJuice();
             }
@@ -249,6 +260,12 @@ namespace Party.RedLight
         {
             if (!_snapshotTaken) return;
 
+            // Same fairness issue as #10: several players go out on one STOP, and
+            // placements were handed out in FindObjectsByType order, so who "came last"
+            // was an array position rather than a result. Here the honest ranking is how
+            // far up the lane they got - the player nearest the start goes out lowest.
+            var casualties = new List<(PartyPlayer p, string reason)>();
+
             foreach (PartyPlayer p in Players())
             {
                 if (p.eliminated || p.finished) continue;
@@ -266,16 +283,21 @@ namespace Party.RedLight
                     continue;
                 }
 
-                if (moved) { Eliminate(p, "moved"); continue; }
+                if (moved) { casualties.Add((p, "moved")); continue; }
 
                 if (_framedThisStop.Contains(p.netId))
-                    Eliminate(p, "framed");
+                    casualties.Add((p, "framed"));
             }
+
+            casualties.Sort((a, b) => a.p.transform.position.z.CompareTo(b.p.transform.position.z));
+            foreach (var c in casualties) Eliminate(c.p, c.reason);
         }
 
         [Server] void Eliminate(PartyPlayer p, string reason)
         {
             p.eliminated = true;
+            // First out is LAST place, so positions are handed out from the bottom up.
+            p.placement = _nextPlace > 0 ? _nextPlace-- : 0;
 
             // READ HIS OPINION BEFORE CHANGING IT.
             // This log line is the only record of WHY someone went out, and the
@@ -326,6 +348,7 @@ namespace Party.RedLight
                 if (p.transform.position.z < finishZ) continue;
 
                 p.finished = true;
+                p.placement = 1;
                 // A showman wants a close race, not a runaway leader - so winning costs
                 // you standing. This is also what stops Decay flattening everyone to
                 // neutral: fading alone gives him no NEW opinions, just weaker old ones.
@@ -354,6 +377,7 @@ namespace Party.RedLight
                 if (best != null)
                 {
                     best.finished = true;
+                    best.placement = 1;
                     _bias.Nudge(best.netId, -0.15f);   // same: leading is not endearing
                     verdictText = $"Time! {best.displayName} was furthest.";
                     SetPhase(RoundPhase.Finished, 0f);
@@ -377,6 +401,12 @@ namespace Party.RedLight
         {
             int stops = _stopsThisRound, outs = 0;
             foreach (PartyPlayer p in Players()) if (p.eliminated) outs++;
+            var order = new List<PartyPlayer>(Players());
+            order.Sort((a, b) => a.placement.CompareTo(b.placement));
+            var ob = new System.Text.StringBuilder("[RedLight] PLACEMENTS");
+            foreach (PartyPlayer pp in order) ob.Append($" | {pp.placement}:{pp.displayName}");
+            Debug.Log(ob.ToString());
+
             Debug.Log($"[RedLight] ROUND {round} END outcome={outcome} stops={stops} " +
                       $"eliminated={outs} spared={_spares} framed={_frames}");
 

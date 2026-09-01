@@ -140,6 +140,12 @@ namespace Party.EditorTools
             voice.gameName = "Say What He Says";
             go.AddComponent<SayWhatDirector>();
 
+            // #11 "The Prediction" wraps #10 here. It is not a separate scene because it
+            // is not a separate game - it bets on whichever minigame is present, which is
+            // the seam the round loop will use. Betting first, then Say What, then the
+            // reveal.
+            go.AddComponent<Party.Prediction.PredictionDirector>();
+
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, DirectorPath);
             Object.DestroyImmediate(go);
             return prefab;
