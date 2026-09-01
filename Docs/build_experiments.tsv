@@ -1,0 +1,10 @@
+label	attempt	regen	level0_bytes	result
+regen-every-time	1	yes	199712	ok
+regen-every-time	2	yes	199640	corrupt
+regen-every-time	3	yes	199712	ok
+regen-every-time	4	yes	199676	corrupt
+regen-every-time	5	yes	199648	corrupt
+regen-every-time	6	yes	199664	corrupt
+regen-every-time	7	yes	199712	ok
+regen-every-time	8	yes	199680	corrupt
+regen-once	1	no	199640	corrupt
