@@ -63,11 +63,59 @@ across changing code, and should not be trusted over this.
 attempts. Cheaper than booting the player, though content-dependent, so it is a
 diagnostic rather than a replacement for the boot check.
 
+### Condition B settled it: the BUILD is deterministic, the SCENE is not
+
+8 builds against one saved scene, no regeneration between them:
+**0/8 good, and all 8 produced level0 at exactly 199640 bytes.**
+
+So the build process is completely deterministic - same scene in, byte-identical player
+out, every time. All the variation in condition A came from the scene being regenerated
+before each attempt. That is the opposite of the recorded conclusion.
+
+Consequence: **an intermittent bug is now a deterministic one.** A known-bad scene is
+preserved at `/tmp/party_repro/RedLight.BAD.199640.unity` (sha256 22ca5dde111e77b7...)
+and reproduces a corrupt player 8 times out of 8.
+
+### Condition D: scene generation is not deterministic, and here is why
+
+Three regenerations produced three different files (1101487 / 1101953 / 1102078 bytes)
+despite `Random.InitState(20260824)`. But all three contain **exactly the same 430
+GameObjects, 28 MonoBehaviours and 430 Transforms, with identical names**.
+
+Two causes, both benign in themselves:
+
+1. Unity assigns every object a **random anchor id** (`--- !u!1 &658387`). Different
+   digit lengths alone change the file size.
+2. Unity writes the objects in a **different ORDER** each time. At the same file offset
+   one scene has `m_Name: Start 4` (a NetworkStartPosition) and another has
+   `m_Name: Capsule`.
+
+`Tools/scene_canon.py` renumbers anchor ids in document order so scenes can be compared
+on content; it cuts the noise from 25,780 diff lines to 21,713, but cannot align them
+because the ORDER itself differs. The remaining difference is order, not content.
+
+**So the fixed seed works, the content is stable, and what varies is how Unity lays it
+out.** Some layouts build a working player and some do not - which fits the failure
+signature already recorded twice in this codebase: a MonoBehaviour deserialising past
+the end of the data.
+
+### The practical fix this unlocks
+
+`build_verified.sh` regenerates the scene before **every** attempt, so it re-rolls the
+dice each time and gets ~37% good. But a good scene builds good **8/8, byte-identical**.
+
+So: **stop regenerating.** Keep a verified-good `RedLight.unity` committed, and only
+regenerate when the setup code actually changes - then verify once and commit the result.
+That turns a 37% coin flip into a deterministic build.
+
 ### Open
 
-- Condition B (regen once, 8 builds against the same saved scene) - running.
-- Condition C (single invocation via `RebuildAndBuildRedLight`) - queued.
-- Condition D (regen twice, sha256 the .unity file) - queued, cheap, no player builds.
+- Capture a known-good scene, commit it, and rework `build_verified.sh` around it.
+- Root cause of the ordering sensitivity still unknown. With a good scene and a bad scene
+  both preserved, this is now bisectable properly rather than by guesswork.
+- Condition C (single invocation via `RebuildAndBuildRedLight`) - no longer the priority,
+  since the regeneration itself is the dice roll rather than the hand-off between
+  processes.
 
 ---
 

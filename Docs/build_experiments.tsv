@@ -8,3 +8,10 @@ regen-every-time	6	yes	199664	corrupt
 regen-every-time	7	yes	199712	ok
 regen-every-time	8	yes	199680	corrupt
 regen-once	1	no	199640	corrupt
+regen-once	2	no	199640	corrupt
+regen-once	3	no	199640	corrupt
+regen-once	4	no	199640	corrupt
+regen-once	5	no	199640	corrupt
+regen-once	6	no	199640	corrupt
+regen-once	7	no	199640	corrupt
+regen-once	8	no	199640	corrupt
