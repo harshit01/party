@@ -41,7 +41,17 @@ namespace Party.SayWhat
 
         public SayWhatBotInput()
         {
-            _accuracy      = Random.Range(0.86f, 0.97f);
+            // RAISED FROM 0.86-0.97, and it fixes two things at once.
+            //
+            // At the old accuracy four of five players were out within two sequences, so
+            // rounds ran 22 seconds against a 30-60 second design rule. It also starved
+            // the framing mechanic: #10 can only frame a PERFECT performance, and at
+            // 0.86 recall over 5 steps a perfect run is barely even odds - so Barnaby
+            // rarely got the chance to be outrageous.
+            //
+            // More accurate bots survive longer (more sequences, longer rounds) AND are
+            // perfect more often (more chances to frame). One change, both symptoms.
+            _accuracy      = Random.Range(0.91f, 0.98f);
             _confusionOdds = Random.Range(0.08f, 0.26f);
             _pace          = Random.Range(0.28f, 0.55f);
         }
