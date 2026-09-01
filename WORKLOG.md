@@ -67,8 +67,11 @@ seeds" is. Read `Docs/NIGHT_SHIFT.md` before adding to this.
   applying it only when nobody is above the gate.
 - **Name tags still collide** when two bots stand adjacent. Fall Guys has this too, so it
   may be fine; a per-slot vertical stagger would fix it.
-- **"All the other games I mentioned"** — only Fall Guys was ever named in chat, plus
-  Pummel Party in `CONCEPT.md`. Need the actual list.
+- **Reference games — ANSWERED 2026-09-01.** Fall Guys, Gang Beasts, Pummel Party,
+  Machine Party, Super Battle Golf, Codenames, and "meccha Chameleon" (read as The
+  Chameleon, the hidden-role party game — confirm). Recorded in `Docs/NIGHT_SHIFT.md`.
+  Two of the seven are hidden-information games and **nothing in the current twelve is**,
+  which is a gap worth the founder's attention.
 
 ### Still never executed
 

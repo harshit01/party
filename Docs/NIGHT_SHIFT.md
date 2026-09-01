@@ -26,12 +26,33 @@ reversed at 3am.
 
 ## Reference games
 
-The founder named **Fall Guys** as the visual and camera target — see
-`Docs/ArtTarget/redlight_target.svg` and the Fall Guys notes in `CameraRig.cs`. The
-concept doc describes the overall structure as **Pummel Party shaped** (a board/journey
-spine punctuated by short minigames). Those two are the references actually on record.
-**Do not invent others.** The founder mentioned "other games" but had not named them at
-the time of writing; if a later message names them, add them here.
+Named by the founder, 2026-09-01. **Do not invent others; do not drop these.**
+
+| Game | What it is a reference FOR |
+|---|---|
+| **Fall Guys** | The camera and the look. Third-person behind your own character, candy palette, chunky rounded geometry. Already built — see `Docs/ArtTarget/redlight_target.svg` and `CameraRig.cs`. |
+| **Gang Beasts** | Floppy physics comedy. Directly vindicates the "capsules and spheres, physics does the acting" decision (`HANDOFF.md` §2) — the humour comes from clumsy bodies, not from animation budget. |
+| **Pummel Party** | The overall shape, already in `CONCEPT.md`: a board/journey spine punctuated by short minigames. |
+| **Machine Party** | Closest shipped analogue to this project — indie 3D multiplayer party game built as a minigame collection. Worth studying for how it sequences rounds. |
+| **Super Battle Golf** | Aim-and-commit physics under contest. A candidate mechanic family the twelve do not currently cover. |
+| **Codenames** | Team word association on hidden information. |
+| **The Chameleon** *(written "meccha Chameleon"; read as the hidden-role party game — confirm)* | One player does not know the secret and must bluff through it. |
+
+### What the last two change
+
+Codenames and The Chameleon are **social deduction and hidden information**, not physics
+chaos. That is a different axis from Fall Guys and Gang Beasts, and it matters:
+
+- It **strengthens Family D** (`MINIGAMES.md` — the host-driven family, #9/#10/#11), which
+  is exactly what is being built next. A host who **knows the secret** and can taunt,
+  mislead or leak it is a far better use of the AI than one who narrates a race.
+- It is the strongest argument yet for the differentiator. Barnaby holding hidden
+  information and lying about it is the same engine as `BarnabyBias` — he already SPARES
+  and FRAMES on private state the players cannot see.
+- Nothing in the current twelve is a hidden-role game. Worth flagging to the founder as a
+  gap, given two of the seven named references are exactly that.
+
+What "like Fall Guys" has meant in practice, decided and built:
 
 What "like Fall Guys" has meant in practice, decided and built:
 - Third-person camera **behind your own character**, not a broadcast shot of the field
