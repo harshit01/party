@@ -8,6 +8,56 @@ seeds" is. Read `Docs/NIGHT_SHIFT.md` before adding to this.
 
 ---
 
+## 2026-09-02 — night shift, part 6: a wrong prediction, stated plainly
+
+### The pattern worth adding to HANDOFF §6
+
+**A per-frame probability inside a multi-second window is a certainty with extra steps.**
+Three instances of this shape turned up in one codebase tonight:
+
+| where | intended | actual |
+|---|---|---|
+| `WouldFrame` in #9 | "rarer than sparing - it must sting, not exhaust" | the same victim framed 6/6 rounds |
+| `RedLightBotInput` twitch | "a small twitch chance" | ~91% once a bot was marked as twitching |
+| `WouldFrame` in #10 (inverse) | same odds as #9 | 0 frames in 6 rounds - the opportunity was far rarer |
+
+The fix is always the same: decide ONCE per event, and keep the odds where they were.
+
+### Where I got it wrong
+
+I moved the twitch out of NEEDS APPROVAL, called it a defect rather than a tuning choice,
+and predicted it would clear Red Light's four failing checks. **It did not.** Same five
+seeds as the two earlier sweeps:
+
+    before tonight          55% wipeouts, 89 eliminations
+    after placement fixes   45% wipeouts, 87 eliminations
+    after the twitch fix    60% wipeouts, 91 eliminations
+
+All three sit inside measurement noise (±11% at 20 rounds). My arithmetic was on the
+**conditional** probability: the 91% only applies once `_twitchingThisStop` is true, and
+that is already gated by `_twitchOdds` at 5-30%. Per-stop catch rate was ~15% before and
+~13% after. The per-frame roll was never the dominant term.
+
+The fix is kept because it is right on its own merits - frame-rate independence, and it
+matches the intent the comment always stated - but it is **not** the answer to the
+wipeout rate.
+
+### The real cause of Red Light's wipeouts, and it is a design call
+
+~13% per stop compounding across the dozen stops in a round gives ~86% chance of being
+caught. That is the whole story, and lowering it is a difficulty decision.
+**Lever: `RedLightBotInput._twitchOdds` (currently 0.05-0.30).** Back in NEEDS APPROVAL,
+where I had it originally.
+
+### A near-miss worth recording
+
+Red Light's suite went red immediately after I edited `RedLightDirector.JudgeMovers`, which
+is an extremely persuasive coincidence. A same-seed sweep showed the change had made it
+slightly **better**. The suites drew a fresh random seed every run, so a pass could flip to
+a fail with no code change; both are now pinned to `SEED=20260902`, overridable.
+
+---
+
 ## 2026-09-02 — night shift, part 5: bots were going silent, and I tuned around it for hours
 
 **The most important thing found tonight is a correction to my own work.**
@@ -392,8 +442,10 @@ Treat the size as a diagnostic hint only; the boot is the measurement.
 
 ### NEEDS APPROVAL (founder, when awake)
 
-- **Bot twitch fix.** Same shape as the framing fix (decide once per stop). Changes
-  difficulty, which is a design call, so not done.
+- **Red Light wipeout rate (~55-60% of rounds).** The per-frame twitch roll is now fixed,
+  but measurement showed that was NOT the cause. The real one is `_twitchOdds` at 0.05-0.30
+  per stop compounding to ~86% across a round's dozen stops. Lowering it is a difficulty
+  call. Lever: `RedLightBotInput._twitchOdds`.
 - **Lane reads washed out.** Ambient was lifted hard to kill deep shadows and it
   flattened the ground plane. Would pull `ambientGroundColor` back down.
 - **`EnsureFavouriteAndTarget` pins the pet.** Croucher sat at exactly 0.400 for rounds
