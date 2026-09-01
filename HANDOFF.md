@@ -271,7 +271,17 @@ In the editor: open `Assets/_Party/Scenes/Menu.unity` and press Play.
 9. **For anything visual, get a reference image FIRST.** Three visual passes were spent
    guessing at a look the founder could show in one screenshot. `Docs/ArtTarget/` exists
    for this: agree the target, then build to it and compare.
-10. **Small models fail stacked NEGATIVE constraints.** gpt-4o-mini obeyed an
+10. **A per-frame probability inside a multi-second window is a certainty with extra
+   steps.** Three instances of this exact shape were found in one night (Sep 2026):
+   `WouldFrame` rolled every frame of a STOP made "rarer than sparing" into the same
+   victim being framed in 6 of 6 rounds; a bot's "small twitch chance" of 2% per frame
+   became ~91% across a 1.5-2.6s freeze; and the same odds in a game that only rolls
+   once per sequence produced ZERO frames in 6 rounds. Decide ONCE per event and leave
+   the odds alone. Related: check the JOINT probability, not the conditional - the twitch
+   was already gated at 5-30% per stop, so fixing the inner roll barely moved the outcome
+   and a confident prediction that it would was wrong.
+
+11. **Small models fail stacked NEGATIVE constraints.** gpt-4o-mini obeyed an
    anti-parrot rule ~75% of the time; gpt-4o reliably.
 
 ## 7. Moving machines
