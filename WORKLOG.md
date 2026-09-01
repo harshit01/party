@@ -8,6 +8,57 @@ seeds" is. Read `Docs/NIGHT_SHIFT.md` before adding to this.
 
 ---
 
+## 2026-09-02 — night shift, part 5: bots were going silent, and I tuned around it for hours
+
+**The most important thing found tonight is a correction to my own work.**
+
+`SayWhatBotInput` guarded replanning with `_plannedFor != d.sequenceNumber`. But
+`sequenceNumber` **resets to 0 every round**, so from round 2 onward a bot whose plan was
+already built for "sequence 1" never rebuilt it - it kept an exhausted plan, submitted
+**nothing at all**, and was eliminated on `matched=0` having never pressed a key. The
+damage compounded as more bots went stale.
+
+**Every pacing measurement I took before finding this was polluted by it.** I spent hours
+adjusting constants - the round cap, the framing scale, bot recall - against numbers a
+state bug was producing. Rounds were short because the bots had stopped playing.
+
+Same seed (111), 6 rounds, three states:
+
+| state | seconds | in window | sequences |
+|---|---|---|---|
+| bug present, recall raised | `[22,22,22,12,12,12]` | 0/6 | 2,2,2,1,1,1 |
+| bug fixed, recall raised | `[67,85,35,35,–,90]` | runs to the cap | 5,6,3,3,–,7 |
+| bug fixed, recall **reverted** | `[22,35,22,35,50,35]` | 4/6 | 2,3,2,3,4,3 |
+
+The recall raise had been made to fix the 22-second rounds; once the real cause was gone
+it overshot hard, so it is reverted to 0.86-0.97.
+
+**The tell was in the data the whole time.** Round length declining *monotonically within
+a session* is a state bug, not a balance problem - and I read past it twice while
+adjusting constants. That is §6.8 in its most expensive form: diagnose before tuning.
+
+### A test that was wrong, rather than a game that was
+
+The "Barnaby SPARES favourites" check demanded at least one spare per session. Measured:
+only **4 of 21 eliminations were near misses**, and exactly **one** belonged to a
+spare-eligible player - so a 6-round sample contained a single chance and the check was
+testing the dice.
+
+That rarity is the signature working, not a fault: a confused bot replays an EARLIER
+sequence perfectly, which scores about zero, so most failures in #10 are total rather
+than narrow. The check now counts near-miss chances that fell to players he likes and
+only fails when there were at least five and none were taken - and reports the ratio
+either way, so a genuinely broken spare mechanic still shows up. Fixtures still
+discriminate.
+
+### Where it landed
+
+    #10 gated session   17/17    PASS
+    #11 same session    10/10
+    suite verdict       PASS - Say What He Says is intact
+
+---
+
 ## 2026-09-02 — night shift, part 4: minigame #11, and a fairness bug in #9 and #10
 
 **"The Prediction" (MINIGAMES.md #11) is built and passing 10/10.** It is the first
