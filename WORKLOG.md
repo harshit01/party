@@ -122,6 +122,20 @@ short rounds are a small-lobby effect, not a pacing bug.
   camera. `Docs/ArtTarget/` needs an agreed target before it is built, same as Red Light.
   The mechanic is fully testable without it.
 
+- **#10 round length is variable (22-85s) and I stopped tuning it.** The design rule is
+  30-60s. Two changes got most rounds there - enforcing the time cap every frame (it was
+  only checked between sequences, and one round ran 106s against a 90s limit) and raising
+  bot recall from 0.86-0.97 to 0.91-0.98. That took in-window from 5/8 to 7/8 to 5/8 as
+  framing was also tuned; the current figure is **62.5%, against a check that wants 60%**.
+
+  **I stopped there on purpose.** Round length depends on how fast people fail, so it is
+  inherently variable, and continuing to nudge constants until the number goes green is
+  §6.5 - letting a metric become the goal. A test that has been tuned against measures the
+  tuning. Whether that variance is a problem is a feel question: a round that ends in 22
+  seconds because everyone fluffed sequence two might be funny rather than broken. That is
+  a founder call, and the levers are `SayWhatDirector.callBeat`, `performPerStep`,
+  `startLength` and `SayWhatBotInput._accuracy`.
+
 ---
 
 ## 2026-09-01 — night shift, part 2: build corruption SOLVED
