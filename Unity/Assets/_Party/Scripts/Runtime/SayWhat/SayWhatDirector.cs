@@ -65,6 +65,7 @@ namespace Party.SayWhat
         BarnabyBias _bias;
         HostVoice   _voice;
         System.Random _rng;
+        int _seed;
 
         readonly List<PartyAction> _sequence = new List<PartyAction>();
         /// <summary>Every sequence this round, so a bot can confidently replay an old one.</summary>
@@ -74,6 +75,7 @@ namespace Party.SayWhat
         int    _revealIndex;
         double _nextReveal;
         double _roundEndsAt;
+        double _roundStartedAt;
         int    _spares, _frames, _outs;
         double _nextStandingPush;
 
@@ -98,8 +100,27 @@ namespace Party.SayWhat
                 { seed = s; break; }
 
             Debug.Log($"[SayWhat] bias seed={seed}");
+            _seed = seed;
             _bias = new BarnabyBias(seed);
             _rng  = new System.Random(seed);
+
+            // SEED THE BOTS TOO - but know what this does and does not buy.
+            //
+            // Every bot's recall accuracy, confusion odds and pace come from
+            // UnityEngine.Random, which was never seeded, so two runs of the same seed
+            // drew different bots. Seeding here (before PartyNetworkManager fills the
+            // lobby) fixes that, and makes the SEQUENCES identical run to run.
+            //
+            // It does NOT make a session bit-reproducible, and measurement says so:
+            // two runs of seed 5150 still ended round 1 after 4 sequences and 3. Bot
+            // actions are paced off Time.time, so frame timing decides how many land
+            // inside the Perform window - and that is inherent to a real-time game
+            // rather than something worth engineering away.
+            //
+            // So do NOT compare two single runs and call the difference a result. Compare
+            // DISTRIBUTIONS over fixed seeds, the way Tools/bias_sweep.sh does for #9.
+            // That is the §6.8 lesson in its practical form.
+            Random.InitState(seed);
         }
 
         // ------------------------------------------------------------------
@@ -116,6 +137,10 @@ namespace Party.SayWhat
             _spares = _frames = _outs = 0;
             sequenceNumber = 0;
 
+            // Re-seed per round so each round is deterministic AND different from the
+            // last, rather than every round replaying identically.
+            Random.InitState(unchecked(_seed * 397) ^ round);
+
             if (round > 1) _bias?.Decay(0.10f);
             _bias?.EnsureFavouriteAndTarget(Players(), 0.4f, -0.4f);
 
@@ -127,6 +152,7 @@ namespace Party.SayWhat
 
             verdictText = "";
             revealed    = "";
+            _roundStartedAt = NetworkTime.time;
             _roundEndsAt = NetworkTime.time + roundTimeLimit;
             callText = "Watch me very carefully.";
             SetPhase(SayWhatPhase.Countdown, countdownSeconds);
@@ -339,8 +365,13 @@ namespace Party.SayWhat
 
         [Server] void Summarise(string outcome)
         {
+            // DURATION IS A DESIGN CONSTRAINT, so it gets measured rather than assumed.
+            // MINIGAMES.md opens with "2-8 players, one screen, 30-60 seconds" - a round
+            // that ends in 20s has not given the host enough to work with, and one that
+            // runs to 90s is not a party minigame any more.
+            double secs = NetworkTime.time - _roundStartedAt;
             Debug.Log($"[SayWhat] ROUND {round} END outcome={outcome} sequences={sequenceNumber} " +
-                      $"eliminated={_outs} spared={_spares} framed={_frames}");
+                      $"eliminated={_outs} spared={_spares} framed={_frames} seconds={secs:F1}");
 
             if (_bias == null) return;
             var sb = new StringBuilder();

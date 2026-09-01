@@ -1,0 +1,17 @@
+[AutoRun] beginning round 1/2
+[SayWhat] bias seed=111
+[SayWhat] SEQUENCE 1 len=3 steps=Bow,Left,Jump
+[SayWhat] SPARED Priya (matched 2/3, standing=pet)
+[SayWhat] Ravi out (wrong, matched=0/3, standing=neutral)
+[SayWhat] SEQUENCE 2 len=4 steps=Right,Forward,Bow,Left
+[SayWhat] Tom out (framed, matched=4/4, standing=grudge)
+[SayWhat] ROUND 1 END outcome=winner:Priya sequences=2 eliminated=2 spared=1 framed=1 seconds=38.4
+[SayWhat] STANDINGS round=1 | Priya=0.700(pet) | Ravi=0.100(neutral) | Tom=-0.500(grudge)
+[AutoRun] beginning round 2/2
+[SayWhat] SEQUENCE 1 len=3 steps=Jump,Jump,Back
+[SayWhat] Priya out (wrong, matched=1/3, standing=pet)
+[SayWhat] SEQUENCE 2 len=4 steps=Left,Back,Right,Bow
+[SayWhat] SPARED Tom (matched 3/4, standing=tolerated)
+[SayWhat] Ravi out (wrong, matched=2/4, standing=neutral)
+[SayWhat] ROUND 2 END outcome=winner:Tom sequences=2 eliminated=2 spared=1 framed=0 seconds=41.0
+[SayWhat] STANDINGS round=2 | Priya=0.630(pet) | Ravi=0.090(neutral) | Tom=-0.315(neutral)

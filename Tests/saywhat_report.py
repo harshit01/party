@@ -22,7 +22,7 @@ from collections import defaultdict
 # "Player 0", with a space. See the same note in redlight_report.py - that analyser had
 # been silently dropping every round a human won.
 END   = re.compile(r"\[SayWhat\] ROUND (\d+) END outcome=(.+?) sequences=(\d+) "
-                   r"eliminated=(\d+) spared=(\d+) framed=(\d+)")
+                   r"eliminated=(\d+) spared=(\d+) framed=(\d+)(?: seconds=([\d.]+))?")
 SEQ   = re.compile(r"\[SayWhat\] SEQUENCE (\d+) len=(\d+) steps=(\S+)")
 STAND = re.compile(r"\[SayWhat\] STANDINGS round=(\d+)(.*)")
 PAIR  = re.compile(r"\| ([^=|]+)=(-?\d+\.\d+)\(([a-z]+)\)")
@@ -48,7 +48,8 @@ def parse(path):
             if m:
                 rounds.append(dict(round=int(m.group(1)), outcome=m.group(2),
                                    sequences=int(m.group(3)), eliminated=int(m.group(4)),
-                                   spared=int(m.group(5)), framed=int(m.group(6))))
+                                   spared=int(m.group(5)), framed=int(m.group(6)),
+                                   seconds=float(m.group(7)) if m.group(7) else None))
                 continue
             m = SEQ.search(line)
             if m:
@@ -105,6 +106,17 @@ def main():
 
     winners = sum(1 for r in rounds if r["outcome"].startswith("winner:"))
     check(winners > 0, "rounds produce a winner", f"{winners}/{len(rounds)} had a winner")
+
+    # MINIGAMES.md opens with "30-60 seconds". Checked, not assumed - a round that ends
+    # in 20s has not given the host enough to work with.
+    timed = [r["seconds"] for r in rounds if r.get("seconds") is not None]
+    if timed:
+        short = [s for s in timed if s < 25]
+        long_ = [s for s in timed if s > 75]
+        check(not short and not long_, "rounds land near the 30-60s design window",
+              f"seconds: {[round(s) for s in timed]}"
+              + (f"  SHORT:{[round(s) for s in short]}" if short else "")
+              + (f"  LONG:{[round(s) for s in long_]}" if long_ else ""))
 
     thin = [r["round"] for r in rounds if r["sequences"] < min_seq]
     check(rounds and not thin, f"at least {min_seq} sequences per round",
