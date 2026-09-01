@@ -84,6 +84,16 @@ namespace Party
     [SerializeField] float nameFadeStart = 9f;
     [Tooltip("Hidden beyond this. Keeps the screen clear of distant clutter.")]
     [SerializeField] float nameFadeEnd = 22f;
+    /// <summary>
+    /// World size per metre of camera distance, so a tag holds a CONSTANT SCREEN SIZE.
+    ///
+    /// The tag is a world-space TextMesh at characterSize 0.16, which was picked for a
+    /// camera 23 metres away. The follow camera sits at 7, so the same text drew about
+    /// 3.3x bigger and a cluster of bots near the lens turned into a wall of overlapping
+    /// letters across the frame - visibly worse than the wide shot it replaced. Scaling
+    /// with distance decouples the tag from wherever the camera happens to be.
+    /// </summary>
+    [SerializeField] float nameSizePerMetre = 0.026f;
 
     [Header("Scene refs")]
         [Tooltip("Visual-only child the Filament is built under. Never the networked root.")]
@@ -229,6 +239,9 @@ namespace Party
             bool near = dist < nameFadeEnd;
             if (nameTag.gameObject.activeSelf != near) nameTag.gameObject.SetActive(near);
             if (!near) return;
+
+            nameTag.transform.localScale =
+                Vector3.one * Mathf.Clamp(dist * nameSizePerMetre, 0.10f, 0.70f);
 
             float a = Mathf.InverseLerp(nameFadeEnd, nameFadeStart, dist);
             Color baseCol = eliminated ? new Color(0.6f, 0.6f, 0.65f) : colour;
