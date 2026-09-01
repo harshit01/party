@@ -1,0 +1,12 @@
+[Prediction] ROUND 1 betting opens on Say What He Says
+[Prediction] BETS round=1 | Ann->Bob | Bob->Cal | Cal->Ann | Dot->Bob
+[Prediction] ROUND 1 RESULT last=Bob winner=Cal correct=2/4 topPick=Bob topCount=2 unanimous=False piled=False backfired=False
+[Prediction] SCORES round=1 | Ann=3 | Bob=0 | Cal=2 | Dot=3
+[Prediction] ROUND 2 betting opens on Say What He Says
+[Prediction] BETS round=2 | Ann->Bob | Bob->Cal | Cal->Bob | Dot->Bob
+[Prediction] ROUND 2 RESULT last=Cal winner=Bob correct=1/4 topPick=Bob topCount=3 unanimous=False piled=True backfired=True
+[Prediction] SCORES round=2 | Ann=3 | Bob=2 | Cal=2 | Dot=3
+[Prediction] ROUND 3 betting opens on Say What He Says
+[Prediction] BETS round=3 | Ann->Cal | Bob->Cal | Cal->Dot | Dot->Ann
+[Prediction] ROUND 3 RESULT last=Cal winner=Ann correct=2/4 topPick=Cal topCount=2 unanimous=False piled=False backfired=False
+[Prediction] SCORES round=3 | Ann=8 | Bob=5 | Cal=2 | Dot=3

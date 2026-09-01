@@ -1,0 +1,10 @@
+[Prediction] ROUND 1 betting opens on Say What He Says
+[Prediction] BETS round=1 | Ann->Bob | Bob->Bob | Cal->Bob | Dot->Bob
+[Prediction] ROUND 1 RESULT last=Cal winner=Ann correct=0/4 topPick=Bob topCount=4 unanimous=True piled=True backfired=False
+[Prediction] SCORES round=1 | Ann=0 | Bob=0 | Cal=0 | Dot=0
+[Prediction] ROUND 2 betting opens on Say What He Says
+NullReferenceException: Object reference not set to an instance of an object
+[Prediction] BETS round=2 | Ann->Bob
+[Prediction] ROUND 2 RESULT last=Cal winner=Ann correct=0/1 topPick=Bob topCount=1 unanimous=True piled=False backfired=False
+[Prediction] SCORES round=2 | Ann=0 | Bob=0 | Cal=0 | Dot=0
+[Prediction] ROUND 3 betting opens on Say What He Says

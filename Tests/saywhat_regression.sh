@@ -48,6 +48,17 @@ if python3 Tests/saywhat_report.py Tests/fixtures/saywhat_bad.log 2 >/dev/null 2
 else
   echo "  OK   broken fixture is caught"
 fi
+# #11 wraps #10 in this scene, so its analyser is calibrated here too.
+if python3 Tests/prediction_report.py Tests/fixtures/prediction_good.log >/dev/null 2>&1; then
+  echo "  OK   clean Prediction fixture passes"
+else
+  echo "  FAIL: the Prediction analyser rejects a KNOWN-GOOD session"; exit 1
+fi
+if python3 Tests/prediction_report.py Tests/fixtures/prediction_bad.log >/dev/null 2>&1; then
+  echo "  FAIL: the Prediction analyser PASSES a known-broken session"; exit 1
+else
+  echo "  OK   broken Prediction fixture is caught"
+fi
 
 # ---------------------------------------------------------------- 1. artifact
 hdr "1/4  ARTIFACT - does the player actually boot?"
@@ -69,6 +80,11 @@ echo "  running..."
        -partyautopilot -logFile "$SESSION" >/dev/null 2>&1
 echo
 python3 Tests/saywhat_report.py "$SESSION" "$MIN_SEQ" || fail=1
+
+# #11 rides on the same session: it wraps the minigame, so one run tests both.
+echo
+echo "  --- #11 THE PREDICTION, wrapping the same rounds ---"
+python3 Tests/prediction_report.py "$SESSION" | sed 's/^/  /' || fail=1
 
 if [ "$AI_UP" = "0" ]; then
   echo
