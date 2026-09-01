@@ -15,3 +15,15 @@ regen-once	5	no	199640	corrupt
 regen-once	6	no	199640	corrupt
 regen-once	7	no	199640	corrupt
 regen-once	8	no	199640	corrupt
+good-scene-pinned	1	no	199688	corrupt
+good-scene-pinned	2	no	199688	corrupt
+good-scene-pinned	3	no	199688	corrupt
+good-scene-pinned	4	no	199688	corrupt
+good-scene-pinned	5	no	199688	corrupt
+good-scene-pinned	6	no	199688	corrupt
+good-scene-never-regen	1	never	199700	ok
+good-scene-never-regen	2	never	199700	ok
+good-scene-never-regen	3	never	199700	ok
+good-scene-never-regen	4	never	199700	ok
+good-scene-never-regen	5	never	199700	ok
+good-scene-never-regen	6	never	199700	ok

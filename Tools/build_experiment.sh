@@ -11,7 +11,12 @@
 # So: one condition per invocation, a fixed number of attempts, and every attempt's
 # level0 size and boot result recorded. Compare CONDITIONS, never individual builds.
 #
-#   ./Tools/build_experiment.sh <label> <attempts> <regen-every-time: yes|no>
+#   ./Tools/build_experiment.sh <label> <attempts> <yes|no|never>
+#
+#     yes    regenerate the scene before every attempt (what build_verified.sh does)
+#     no     regenerate ONCE up front, then build that scene repeatedly
+#     never  do not regenerate at all - build whatever scene is already in the project.
+#            Use this to test a scene you have copied in; `no` would overwrite it.
 #
 # Results append to Docs/build_experiments.tsv so they survive the session.
 set -uo pipefail
@@ -44,8 +49,11 @@ regen_scene() {
 }
 
 # Regenerate once up front when the condition is "no" - the point of that condition is
-# to build the SAME saved scene repeatedly.
+# to build the SAME saved scene repeatedly. "never" skips even that: it exists because
+# running "no" against a scene copied into the project silently regenerated over it and
+# measured a completely different scene for six builds.
 [ "$REGEN" = "no" ] && { echo "  [$LABEL] regenerating scene ONCE up front..."; regen_scene; }
+[ "$REGEN" = "never" ] && echo "  [$LABEL] using the scene already in the project, no regeneration"
 
 ok=0
 for i in $(seq 1 "$N"); do
