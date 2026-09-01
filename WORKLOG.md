@@ -8,6 +8,70 @@ seeds" is. Read `Docs/NIGHT_SHIFT.md` before adding to this.
 
 ---
 
+## 2026-09-02 — night shift, part 4: minigame #11, and a fairness bug in #9 and #10
+
+**"The Prediction" (MINIGAMES.md #11) is built and passing 10/10.** It is the first
+thing here that is not a self-contained game: it WRAPS a minigame through a new
+`IMinigameDirector` seam, which makes it the first piece of the round loop rather than a
+twelfth of the collection. Bets stay server-side until the reveal, so it is also the
+first hidden-information mechanic - the axis Codenames and The Chameleon sit on.
+
+### The fairness bug it exposed in #9 AND #10
+
+Betting on who came last needs "last" to mean something, and it did not. Several players
+routinely go out on the same sequence or the same STOP, and placements were handed out in
+`FindObjectsByType` order - **the wooden spoon went to whoever was first in an array.**
+
+Measured: one round eliminated Player 0 on `matched=1/3` and Fenwick on `matched=3/3` -
+perfect, and FRAMED - in the same pass, and the perfect performance placed lower purely
+by list position. #10 now ranks same-sequence casualties by recall, #9 by distance up the
+lane. "Came last" was spread across 3 players before the fix and 5 after.
+
+### Bot betting took three measured iterations
+
+1. **Back Barnaby's target 70% of the time.** His favouritism is public, so it is the
+   obvious read - and it was a terrible bet: right **0-1 times out of 5**, because
+   standing does not predict losing at a memory game. Nobody ever scored, so there was
+   nothing to talk about.
+2. **Mix in form and a hunch.** 7 correct across 8 rounds and a real leaderboard - but
+   the bets spread so thinly that a pile-on **never happened once**. The signature
+   disappeared entirely.
+3. **Add herding** - a bot may copy a bet already placed, as people at a table do. Over
+   10 rounds: **2 pile-ons, 1 backfire, 15 correct calls, scores spread 6-24.**
+
+Both intermediate states would have passed a test that only asked whether bets were
+placed. They are now explicit checks: "predictions are sometimes CORRECT" and "the room
+piles onto one target sometimes".
+
+The literal signature - *strict* unanimity - never once occurred, because bots dissent by
+design. A ≥75% pile-on is tracked alongside it; that is what the moment looks like at a
+real table.
+
+### Round cap was not a cap
+
+`roundTimeLimit` was only checked between sequences, so a round entering a 7-step
+sequence just under the limit ran the whole thing first. One round ran **106s against a
+90s cap**. Now checked every frame. Same seeds before/after:
+
+    before  [22, 22, 35, 35, 35, 67, 67, 106]  5/8 in window
+    after   [22, 35, 35, 35, 50, 50, 50,  67]  7/8 in window
+
+The pacing CHECK was also wrong - it demanded every round sit in the window. A round
+where everyone fails the second sequence is legitimately quick; uniform length would mean
+capping the drama. It now tests the distribution, and discriminates (FAIL on the pre-fix
+data, OK after).
+
+### State
+
+| | gate |
+|---|---|
+| #9 Red Light | suite PASS |
+| #10 Say What He Says | 16/17 → passing after the pacing fix |
+| #11 The Prediction | 10/10 |
+| build reliability | 6/6, first-time |
+
+---
+
 ## 2026-09-02 — night shift, part 3: minigame #10 built and passing
 
 **"Say What He Says" (MINIGAMES.md #10) is playable and tested.** Suite reports
