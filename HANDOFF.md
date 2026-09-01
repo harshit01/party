@@ -66,25 +66,40 @@ keyboard**, hosted by an AI presenter who genuinely watched you play and remembe
   deciding whether the host treats bots as characters in their own right or mostly
   ignores them.
 
-### KNOWN ISSUE — Red Light player builds are intermittently corrupt
+### SOLVED (Sep 2026) — Red Light builds were intermittently corrupt
 
-Roughly one build in three produces a working player. The rest die at startup with
-`level0 is corrupted`, after Unity has reported `[Build] StandaloneOSX -> Succeeded`.
+**The scene was the problem, not the build.** Measured one condition at a time
+(`Docs/build_experiments.tsv`, `WORKLOG.md`):
 
-- **Only affects builds.** Editor Play mode is unaffected, and NetTest builds cleanly
-  every time, so development and the netcode path are not blocked.
-- **Ruled out:** Kenney props, the PartyPlayer prefab, DepthOfField, the whole
-  post-processing volume, MatchBootstrap.
-- **Did not fix it:** retrying, doing the scene rebuild and player build in one Unity
-  invocation, seeding Random so scene content is identical.
-- **The telling detail:** `level0` is a different size on every build even with a fixed
-  seed, so the non-determinism is inside Unity's serialisation, not our content.
+| condition | result |
+|---|---|
+| regenerate the scene before every build | **3/8 good** — a coin flip |
+| one BAD scene, built 8 times | **0/8**, all `level0` 199640 bytes |
+| one GOOD scene, built 6 times | **6/6**, all `level0` 199700 bytes |
 
-**Workaround:** `Tools/build_verified.sh` builds, boots the player, checks the scene
-loads, and rebuilds if not — up to 10 attempts, so failure odds are about 2%. Use it
-instead of calling Unity's build method directly. Unity must be closed.
+The build is **completely deterministic**: same scene in, byte-identical player out.
+What is nondeterministic is scene *generation*. Three regenerations produce three
+different files containing exactly the same 430 GameObjects with identical names —
+Unity assigns random anchor ids and writes the objects in a different **order** each
+time. Some orders produce a player that dies at startup, which matches the signature
+already recorded twice in this codebase: a MonoBehaviour deserialising past the end of
+the data.
 
-Worth revisiting on a Unity patch release, or if a smaller repro turns up.
+**The old entry here said the opposite** — that `level0` differed on every build even
+with a fixed seed, so the non-determinism was inside Unity's serialisation. That reading
+came from diffing two scenes whose anchor ids had all moved (25,780 lines of churn for
+identical content) and from the varying sizes of the *failed* builds. The fixed seed
+works fine; good builds are byte-identical. `Tools/scene_canon.py` normalises anchor ids
+so scenes can be compared on content.
+
+**What this means day to day:** the committed `RedLight.unity` has been built and booted.
+Leave it alone and `./Tools/build_verified.sh` succeeds first time. Only when
+`RedLightSetup` or the scene content changes do you regenerate — `./Tools/build_verified.sh -r`
+hunts for a scene that boots and tells you to commit it. **Commit the regenerated scene.**
+
+Still open: *why* certain object orders break serialisation. A known-good and a
+known-bad scene are both preserved, so this is now bisectable rather than intermittent —
+it just is not worth doing while the workaround is a pinned file.
 
 ### Open, deliberately undecided
 - **Game name.** Not chosen. Do the trademark/collision check BEFORE any art is
