@@ -45,6 +45,12 @@ namespace Party.SayWhat
         [Tooltip("Hard cap, so a round cannot run forever if everyone is very good.")]
         public int maxLength = 9;
 
+        [Header("Judging")]
+        [Tooltip("Framing is only offered on a PERFECT performance here, which is much " +
+                 "rarer than Red Light's 'did not move' - so the roll is scaled up to " +
+                 "give Barnaby a comparable rate of being outrageous.")]
+        public float frameChanceScale = 2.5f;
+
         [Header("Timing")]
         [Tooltip("Seconds Barnaby spends calling each step.")]
         public float callBeat = 0.85f;
@@ -320,7 +326,10 @@ namespace Party.SayWhat
 
                 if (!perfect) { casualties.Add((p, matched, "wrong")); continue; }
 
-                if (_bias.WouldFrame(p.netId)) casualties.Add((p, matched, "framed"));
+                // Scaled up: this game only offers a chance to frame when someone is
+                // PERFECT, which is far rarer than Red Light's "did not move".
+                if (_bias.WouldFrame(p.netId, frameChanceScale))
+                    casualties.Add((p, matched, "framed"));
             }
 
             // Worst recall goes out lowest. A framed player matched everything, so this

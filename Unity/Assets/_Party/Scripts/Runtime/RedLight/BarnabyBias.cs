@@ -51,12 +51,27 @@ namespace Party.RedLight
             return _rng.NextDouble() < a * 0.8f;   // up to 80% for a real pet
         }
 
-        /// <summary>Someone he has taken against may be called out for nothing.</summary>
-        public bool WouldFrame(uint netId)
+        /// <summary>
+        /// Someone he has taken against may be called out for nothing.
+        ///
+        /// `chanceScale` exists because OPPORTUNITY DENSITY DIFFERS PER MINIGAME, while
+        /// the character must not. Red Light consults this for every motionless player on
+        /// every STOP - a dozen-plus chances a round. "Say What He Says" only consults it
+        /// for a PERFECT performance, because framing means he claims you were wrong when
+        /// you were right, and most players are not perfect. Measured over a 6-round
+        /// session of #10 at the same odds: ZERO frames, so the signature mechanic simply
+        /// never appeared.
+        ///
+        /// Scaling the roll rather than loosening the CONDITION is deliberate: framing a
+        /// player who was only half right would not be framing, it would be an ordinary
+        /// elimination with a rude caption.
+        /// </summary>
+        public bool WouldFrame(uint netId, float chanceScale = 1f)
         {
             float a = AffinityOf(netId);
             if (a >= -0.35f) return false;
-            return _rng.NextDouble() < (-a) * 0.35f;  // rarer than sparing - it must sting, not exhaust
+            // rarer than sparing - it must sting, not exhaust
+            return _rng.NextDouble() < Mathf.Min(0.85f, (-a) * 0.35f * chanceScale);
         }
 
         /// <summary>
