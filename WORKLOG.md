@@ -8,6 +8,35 @@ seeds" is. Read `Docs/NIGHT_SHIFT.md` before adding to this.
 
 ---
 
+## 2026-09-01 — night shift, part 2: build corruption SOLVED
+
+Full matrix, one condition per run (`Docs/build_experiments.tsv`):
+
+| condition | result |
+|---|---|
+| regenerate before every build (old `build_verified.sh`) | **3/8 good** |
+| one BAD scene, built 8 times | **0/8**, all level0 199640 |
+| one GOOD scene, built 6 times | **6/6**, all level0 199700 |
+
+**Fix shipped.** The verified scene is committed. `./Tools/build_verified.sh` builds it
+and boots it — succeeded first time, no retries. Regeneration moved behind `-r`, which
+hunts for a scene that boots and tells you to commit it. `HANDOFF.md`'s KNOWN ISSUE is
+rewritten; its diagnosis was backwards.
+
+**Regression suite re-run on the pinned scene: all four phases, 14/15 on the gate.** The
+single failure is rounds 3 and 6 wiping out at 2 and 1 stops — the known bot-twitch
+problem awaiting approval, not a regression. Phase 4 had zero host failures.
+
+**One process error worth recording.** The "good scene pinned" run first came back 0/6,
+apparently contradicting condition B. It was my bug: `build_experiment.sh` with `regen=no`
+regenerates ONCE up front by design, which silently overwrote the scene I had copied in,
+so it measured a fresh bad scene six times. Caught by hashing the in-project file against
+the saved copy. Added a `never` mode. The lesson from §6.8 is what caught it — re-run the
+same configuration and check the inputs, rather than accepting a result that contradicts
+an earlier one.
+
+---
+
 ## 2026-09-01 — night shift, part 1: the build corruption is NOT random serialisation
 
 ### The finding that changes it
