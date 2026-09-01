@@ -108,6 +108,19 @@ So: **stop regenerating.** Keep a verified-good `RedLight.unity` committed, and 
 regenerate when the setup code actually changes - then verify once and commit the result.
 That turns a 37% coin flip into a deterministic build.
 
+### CORRECTION: `level0 == 199712` is NOT a reliable good/bad predictor
+
+Stated earlier in this entry that 199712 predicted a good build "with no false positives
+or negatives". That was 3 good samples, and I then used it as the exit condition for a
+capture loop instead of booting the player. Ten regenerations later it had never matched,
+while producing sizes 199688 and 199692 - both LARGER than any known-bad build in
+condition A, where the largest corrupt was 199680. Those were plausibly good builds, and
+the loop threw them away.
+
+Substituting a cheap proxy for the actual measurement is the same mistake as trusting
+Unity's exit code (§6.7). `Tools/capture_good_scene.sh` boots every candidate instead.
+Treat the size as a diagnostic hint only; the boot is the measurement.
+
 ### Open
 
 - Capture a known-good scene, commit it, and rework `build_verified.sh` around it.
