@@ -23,6 +23,8 @@ namespace Party.RedLight
         RoundPhase _lastPhase = RoundPhase.Waiting;
         float _freezeAt = -1f;
         bool  _twitchingThisStop;
+        bool  _twitched;
+        float _twitchAt;
 
         // Unsticking. Bots drive straight up the lane, so a pillar or a piston pins them
         // and they push into it forever. Observed in play AND headless: four of five
@@ -54,6 +56,10 @@ namespace Party.RedLight
                     {
                         _freezeAt = Time.time + _reaction;
                         _twitchingThisStop = Random.value < _twitchOdds;
+                        // Pick WHEN, once. Late in the stop is funnier and fairer: the
+                        // bot has visibly held still before losing its nerve.
+                        _twitchAt = _freezeAt + Random.Range(0.35f, 1.4f);
+                        _twitched = false;
                     }
                 }
 
@@ -83,9 +89,26 @@ namespace Party.RedLight
                     if (Time.time < _freezeAt)
                         return Vector2.ClampMagnitude(new Vector2(_drift, 1f), 1f) * 0.8f;
 
-                    // Or they simply cannot help themselves.
-                    if (_twitchingThisStop && Random.value < 0.02f)
+                    // Or they simply cannot help themselves - ONCE, at a moment decided
+                    // when the stop began.
+                    //
+                    // This used to roll `Random.value < 0.02f` EVERY FRAME. Over a
+                    // 1.5-2.6s stop that is 90-156 rolls, so a bot marked as twitching
+                    // moved with probability ~91%, and across ~15 stops a round a bot was
+                    // caught with probability ~93%. Measured: 84 of 91 eliminations were
+                    // "moved", every round ended in a wipeout, and rounds finished in 1-3
+                    // stops instead of the intended dozen.
+                    //
+                    // The comment above always said "a small twitch chance". A per-frame
+                    // roll inside a multi-second window is not a small chance, it is a
+                    // certainty with extra steps - the identical defect that made framing
+                    // land on the same victim every round, and that made a "17% chance"
+                    // fire in milliseconds. Third instance of this shape in this codebase.
+                    if (_twitchingThisStop && !_twitched && Time.time >= _twitchAt)
+                    {
+                        _twitched = true;
                         return new Vector2(0f, 0.5f);
+                    }
                 }
 
                 return Vector2.zero;
