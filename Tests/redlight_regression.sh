@@ -23,6 +23,15 @@ set -uo pipefail
 ROUNDS=${ROUNDS:-6}
 PARTICIPANTS=${PARTICIPANTS:-5}
 MIN_STOPS=${MIN_STOPS:-4}
+# FIXED SEED BY DEFAULT, so a run is comparable to the last one.
+#
+# The suite used a fresh random seed every time, which meant a pass could flip to a fail
+# with no code change at all: one run of #9 came back 6/6 wipeouts and failed two checks,
+# and a same-seed sweep then showed the code was actually slightly BETTER than before.
+# Chasing that is exactly how this project produced four confident wrong conclusions
+# (HANDOFF.md §6.8). Override with SEED= to explore other draws.
+SEED=${SEED:-20260902}
+
 LOGDIR=/tmp/party_regression
 mkdir -p "$LOGDIR"
 
@@ -86,7 +95,7 @@ fi
 SESSION="$LOGDIR/session.log"; rm -f "$SESSION"
 echo "  running (up to ~$((ROUNDS * 75))s)..."
 "$APP" -batchmode -nographics -partyrole host -partytarget "$PARTICIPANTS" \
-       -partyround -partyrounds "$ROUNDS" -partyseconds $((ROUNDS * 80)) \
+       -partyround -partyrounds "$ROUNDS" -partybiasseed "$SEED" -partyseconds $((ROUNDS * 80)) \
        -partyautopilot -logFile "$SESSION" >/dev/null 2>&1
 echo
 python3 Tests/redlight_report.py "$SESSION" "$MIN_STOPS" || suite_fail=1
@@ -110,7 +119,7 @@ hdr "3/4  NETWORKED - a second machine plays the round, not just watches"
 NHOST="$LOGDIR/net_host.log"; NCLI="$LOGDIR/net_client.log"; rm -f "$NHOST" "$NCLI"
 cleanup; sleep 1
 "$APP" -batchmode -nographics -partyrole host -partytarget 4 \
-       -partyround -partyrounds 3 -partyseconds 240 \
+       -partyround -partyrounds 3 -partybiasseed "$SEED" -partyseconds 240 \
        -partyautopilot -logFile "$NHOST" >/dev/null 2>&1 & HPID=$!
 sleep 8
 echo "  client joining..."
@@ -179,7 +188,7 @@ if curl -s -m 2 http://127.0.0.1:8790/health >/dev/null 2>&1; then
   cleanup; sleep 1
   echo "  running 2 rounds against the live host service..."
   "$APP" -batchmode -nographics -partyrole host -partytarget 4 \
-         -partyround -partyrounds 2 -partyseconds 180 \
+         -partyround -partyrounds 2 -partybiasseed "$SEED" -partyseconds 180 \
          -partyautopilot -logFile "$AILOG" >/dev/null 2>&1
   if grep -q 'host service unavailable' "$AILOG"; then
     echo "  FAIL: service was up but HostVoice could not reach it:"
