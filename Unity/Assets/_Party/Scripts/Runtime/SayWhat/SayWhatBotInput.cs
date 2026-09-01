@@ -37,21 +37,36 @@ namespace Party.SayWhat
         readonly List<PartyAction> _plan = new List<PartyAction>();
         int   _next;
         float _nextAt;
-        int   _plannedFor = -1;   // which sequenceNumber the plan was built for
+        // WHICH SEQUENCE THE PLAN WAS BUILT FOR - and it must identify the ROUND too.
+        //
+        // This was `sequenceNumber` alone, which RESETS TO 0 EVERY ROUND. So from round 2
+        // onward a bot whose plan was already built for "sequence 1" never rebuilt it: it
+        // kept an exhausted plan, submitted nothing at all, and was eliminated on
+        // matched=0 having never pressed a key. The damage compounded as more bots went
+        // stale - measured, a 6-round session ran 2 sequences per round for rounds 1-3
+        // and exactly 1 for rounds 4-6.
+        //
+        // Worse, it was quietly corrupting the pacing numbers I was tuning against:
+        // rounds were short because the bots had stopped playing, not because the timings
+        // were wrong.
+        int   _plannedRound = -1;
+        int   _plannedSeq   = -1;
 
         public SayWhatBotInput()
         {
-            // RAISED FROM 0.86-0.97, and it fixes two things at once.
+            // BACK TO 0.86-0.97, having briefly been 0.91-0.98.
             //
-            // At the old accuracy four of five players were out within two sequences, so
-            // rounds ran 22 seconds against a 30-60 second design rule. It also starved
-            // the framing mechanic: #10 can only frame a PERFECT performance, and at
-            // 0.86 recall over 5 steps a perfect run is barely even odds - so Barnaby
-            // rarely got the chance to be outrageous.
+            // That raise was made to fix 22-second rounds, and it was treating a symptom:
+            // the real cause was the stale-plan bug above, where bots stopped submitting
+            // anything from round 2 onward and were eliminated having never pressed a
+            // key. With that fixed, the higher accuracy overshot hard - rounds ran to the
+            // 90-second cap instead.
             //
-            // More accurate bots survive longer (more sequences, longer rounds) AND are
-            // perfect more often (more chances to frame). One change, both symptoms.
-            _accuracy      = Random.Range(0.91f, 0.98f);
+            // The lesson is the expensive one this project keeps relearning (§6.8):
+            // DIAGNOSE BEFORE TUNING. Several hours of constant-nudging were spent
+            // compensating for a bug, and every pacing measurement taken during that time
+            // was polluted by it.
+            _accuracy      = Random.Range(0.86f, 0.97f);
             _confusionOdds = Random.Range(0.08f, 0.26f);
             _pace          = Random.Range(0.28f, 0.55f);
         }
@@ -61,15 +76,17 @@ namespace Party.SayWhat
             SayWhatDirector d = SayWhatDirector.Instance;
             if (d == null) return PartyAction.None;
 
+            bool stale = _plannedRound != d.round || _plannedSeq != d.sequenceNumber;
+
             if (d.phase != SayWhatPhase.Perform)
             {
                 // Rebuild on the next Perform. Planning during Watch would let a bot start
                 // before the sequence has finished being called.
-                if (_plannedFor != d.sequenceNumber) _plan.Clear();
+                if (stale) _plan.Clear();
                 return PartyAction.None;
             }
 
-            if (_plannedFor != d.sequenceNumber) BuildPlan(d);
+            if (stale) BuildPlan(d);
             if (_next >= _plan.Count || Time.time < _nextAt) return PartyAction.None;
 
             PartyAction a = _plan[_next++];
@@ -81,7 +98,8 @@ namespace Party.SayWhat
         {
             _plan.Clear();
             _next = 0;
-            _plannedFor = d.sequenceNumber;
+            _plannedRound = d.round;
+            _plannedSeq   = d.sequenceNumber;
             _nextAt = Time.time + Random.Range(0.15f, 0.45f);   // a beat to gather themselves
 
             IReadOnlyList<PartyAction> truth = d.Sequence;
