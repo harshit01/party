@@ -8,6 +8,58 @@ seeds" is. Read `Docs/NIGHT_SHIFT.md` before adding to this.
 
 ---
 
+## 2026-09-02 — night shift, part 3: minigame #10 built and passing
+
+**"Say What He Says" (MINIGAMES.md #10) is playable and tested.** Suite reports
+`PASS`, gated session **17/17**.
+
+| rd | outcome | seqs | out | spared | framed | seconds |
+|---|---|---|---|---|---|---|
+| 1 | winner:Fenwick | 3 | 4 | 0 | 0 | 35 |
+| 2 | wipeout | 5 | 5 | 0 | 2 | 67 |
+| 3 | winner:Bevel | 4 | 4 | 1 | 0 | 50 |
+| 4 | wipeout | 4 | 5 | 0 | 1 | 50 |
+| 5 | winner:Dimple | 3 | 4 | 1 | 0 | 35 |
+| 6 | wipeout | 4 | 5 | 0 | 0 | 50 |
+
+Sequences escalate 3→7, spares land only on `pet`, frames only on `grudge` AND only on
+players who had actually performed it correctly, no fixed victim, and rounds sit in the
+30-60s window the design opens with.
+
+**It reuses the same `BarnabyBias` object as Red Light**, not a copy. A host with a
+separate grudge per minigame would be a different character each round, and his memory
+across the night is the product.
+
+### Three things measurement caught that would otherwise have shipped
+
+1. **A favourite spared at `matched 0/4`** - waved through having done nothing at all.
+   That is a broken referee, not favouritism, and it made pets unkillable (one round
+   produced five spares). Spares now require a near miss. Same seed after: 7 spares → 1.
+2. **A silent bug in the EXISTING Red Light suite.** Outcomes embed a player name and a
+   human slot is `"Player 0"` - with a space. `outcome=(\S+)` stopped at the space and
+   the round was DROPPED; a log containing one reported 15 checks as 5. Every bot name is
+   one word, so it only bit when a HUMAN won - exactly what a bot-only headless test
+   never produces. Fixed in both analysers.
+3. **Sessions are not bit-reproducible even when seeded.** Two runs of seed 5150 diverged
+   (round 1 ended after 4 sequences and 3). Bot actions are paced off `Time.time`, so
+   frame timing decides how many land inside the Perform window. I had written a comment
+   claiming seeding fixed this; it is corrected to say what was measured. **Compare
+   distributions over fixed seeds, never two single runs.**
+
+### Earlier reading corrected
+
+Recorded mid-session that rounds were "22.5s or 35.2s, half too short". That was a
+4-participant sample. At 5 participants they run 35-67s, inside the design window. The
+short rounds are a small-lobby effect, not a pacing bug.
+
+### NEEDS APPROVAL (added this session)
+
+- **The #10 arena is a deliberate placeholder** - a flat stage, no dressing, no composed
+  camera. `Docs/ArtTarget/` needs an agreed target before it is built, same as Red Light.
+  The mechanic is fully testable without it.
+
+---
+
 ## 2026-09-01 — night shift, part 2: build corruption SOLVED
 
 Full matrix, one condition per run (`Docs/build_experiments.tsv`):
