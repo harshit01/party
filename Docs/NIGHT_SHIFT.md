@@ -53,8 +53,6 @@ chaos. That is a different axis from Fall Guys and Gang Beasts, and it matters:
   gap, given two of the seven named references are exactly that.
 
 What "like Fall Guys" has meant in practice, decided and built:
-
-What "like Fall Guys" has meant in practice, decided and built:
 - Third-person camera **behind your own character**, not a broadcast shot of the field
 - Other players stay **visible** — the crowd stumbling around you is the appeal
 - Name tags stay, but **small, near, faded with distance, never your own**
