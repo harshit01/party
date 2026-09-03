@@ -26,6 +26,9 @@ namespace Party.EditorTools
         public static void Build()
         {
             Random.InitState(20260903);
+            // Persist the transparent/emissive materials so their shader variants survive
+            // into the player - built at runtime they get stripped and silently fall back.
+            PresentationSetup.RagdollMaterials();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);

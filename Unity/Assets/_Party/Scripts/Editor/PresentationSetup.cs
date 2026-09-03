@@ -139,6 +139,64 @@ namespace Party.EditorTools
         }
 
         /// <summary>Warm key light plus cool ambient - depth without any art.</summary>
+        /// <summary>
+        /// Persist the ragdoll's dome and filament materials as ASSETS, in Resources.
+        ///
+        /// WHY THEY CANNOT BE BUILT AT RUNTIME. A material created with `new Material(...)`
+        /// in a player only works if the shader VARIANT it needs survived the build, and
+        /// Unity strips variants nothing references. No material in the scene was
+        /// transparent or emissive, so URP's transparent variant was stripped - the dome
+        /// came out fully opaque in the player while looking correct in every inspector,
+        /// and the glowing wire it exists to show was sealed inside a solid white ball.
+        ///
+        /// Saving them as assets in Resources keeps the variants and lets the runtime load
+        /// them by name.
+        /// </summary>
+        public static void RagdollMaterials()
+        {
+            System.IO.Directory.CreateDirectory("Assets/_Party/Resources");
+
+            Material dome = Load("Assets/_Party/Resources/DomeGlass.mat");
+            Shader lit = Shader.Find("Universal Render Pipeline/Lit");
+            if (dome.shader != lit && lit != null) dome.shader = lit;
+            dome.SetColor("_BaseColor", new Color(0.80f, 0.90f, 1f, 0.26f));
+            dome.SetFloat("_Smoothness", 0.9f);
+            dome.SetOverrideTag("RenderType", "Transparent");
+            dome.SetFloat("_Surface", 1f);
+            dome.SetFloat("_Blend", 0f);
+            dome.SetFloat("_ZWrite", 0f);
+            dome.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            dome.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            dome.DisableKeyword("_ALPHATEST_ON");
+            dome.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            dome.EnableKeyword("_ALPHABLEND_ON");
+            dome.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            dome.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(dome);
+
+            Material wire = Load("Assets/_Party/Resources/Filament.mat");
+            if (wire.shader != lit && lit != null) wire.shader = lit;
+            Color glow = new Color(1f, 0.84f, 0.38f);
+            wire.SetColor("_BaseColor", glow);
+            wire.EnableKeyword("_EMISSION");
+            wire.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            wire.SetColor("_EmissionColor", glow * 4f);
+            EditorUtility.SetDirty(wire);
+
+            AssetDatabase.SaveAssets();
+        }
+
+        static Material Load(string path)
+        {
+            Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null)
+            {
+                m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(m, path);
+            }
+            return m;
+        }
+
         public static void Lighting(GameObject lightGo)
         {
             Light l = lightGo.GetComponent<Light>();
