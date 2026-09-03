@@ -21,6 +21,7 @@ PATS = {
     "grab":   re.compile(r"\[Probe\] GRAB worked=(\w+) carried=([\d.-]+)"),
     "throw":  re.compile(r"\[Probe\] THROW speed=([\d.-]+)"),
     "limp":   re.compile(r"\[Probe\] LIMP tilt=([\d.-]+)"),
+    "walkstab": re.compile(r"\[Probe\] WALKSTABILITY falls=(\d+) down_frames=(\d+)"),
     "done":   re.compile(r"\[Probe\] DONE"),
 }
 
@@ -68,6 +69,14 @@ def main():
         # Falling is wanted; falling constantly is not. Roughly 20 s of run at 50 Hz.
         check(down < 450, "is not on the floor most of the time",
               f"{down} physics frames down (~{down/50:.1f} s)")
+
+    if "walkstab" in d:
+        wf, wd = int(d["walkstab"][0]), int(d["walkstab"][1])
+        # THE REAL STABILITY NUMBER. Total down-time includes the limp the probe asks for,
+        # so it read as 9% on the floor when the walk itself had stopped falling entirely.
+        # A stride that lifts and places the legs took walk falls from constant to zero.
+        check(wf == 0, "does not fall over while simply walking",
+              f"{wf} falls, {wd} frames down during the 5 s walk")
 
     if "grab" in d:
         worked, carried = d["grab"][0] == "True", float(d["grab"][1])

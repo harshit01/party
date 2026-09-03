@@ -47,6 +47,12 @@ namespace Party.Ragdoll
         [Tooltip("How far ahead of the hips the anchor sits while moving. THIS is the walk speed.")]
         public float leadDistance = 0.035f;
 
+        [Header("Stride")]
+        [Tooltip("How far each leg swings. This is the whole walk cycle - there is no clip.")]
+        public float strideAngle = 27f;
+        [Tooltip("Steps per second at full pace.")]
+        public float strideRate = 3.4f;
+
         [Header("Recovery")]
         [Tooltip("Seconds face-down before it tries to get back up.")]
         public float getUpAfter = 1.4f;
@@ -58,6 +64,7 @@ namespace Party.Ragdoll
         Rigidbody _pelvis, _chest;
         float _downSince = -1f;
         float _facing;
+        float _stridePhase;
 
         public void Bind(RagdollBuilder.Rig rig)
         {
@@ -238,6 +245,45 @@ namespace Party.Ragdoll
             }
 
             SetSpineTarget(Quaternion.Euler(0f, _facing, 0f));
+            Stride(want, flat.magnitude);
+        }
+
+        /// <summary>
+        /// The walk cycle. There is no animation clip anywhere in this project - the legs
+        /// swing because a sine wave moves their joint targets, and the body reacts.
+        ///
+        /// IT IS ALSO A STABILITY FIX, which is why it exists now rather than as polish.
+        /// Dangling legs drag along the floor while the body translates and act as levers,
+        /// tripping it - the character was on the floor about 17% of a run. Legs that lift
+        /// and place themselves stop catching, and the alternation keeps one under the body
+        /// at all times.
+        ///
+        /// Phase advances with actual speed, so it never moonwalks: stop moving and the
+        /// stride settles back to standing rather than pedalling on the spot.
+        /// </summary>
+        void Stride(Vector3 want, float speed)
+        {
+            bool moving = want.sqrMagnitude > 0.001f && !IsDown && Tone > 0.4f;
+
+            if (moving)
+                _stridePhase += strideRate * Mathf.Clamp(speed / Mathf.Max(maxSpeed, 0.01f), 0.35f, 1f)
+                                * Mathf.PI * 2f * Time.fixedDeltaTime;
+            else
+                _stridePhase = Mathf.LerpAngle(_stridePhase * Mathf.Rad2Deg, 0f,
+                                               Time.fixedDeltaTime * 6f) * Mathf.Deg2Rad;
+
+            float a = Mathf.Sin(_stridePhase) * strideAngle * (moving ? 1f : 0.15f);
+            SetLegTarget(Bone.LegL,  a);
+            SetLegTarget(Bone.LegR, -a);
+        }
+
+        void SetLegTarget(Bone leg, float degrees)
+        {
+            if (!Rig.Joints.TryGetValue(leg, out ConfigurableJoint j)) return;
+            if (!Rig.RestLocal.TryGetValue(leg, out Quaternion rest)) return;
+            // Same inversion as the spine: ConfigurableJoint.targetRotation is relative to
+            // the joint's original orientation, and inverted.
+            j.targetRotation = Quaternion.Inverse(Quaternion.Euler(degrees, 0f, 0f)) * rest;
         }
 
         /// <summary>Point the spine where we are facing, through the drive rather than by force.</summary>

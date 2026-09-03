@@ -27,8 +27,13 @@ namespace Party.Ragdoll
                     LimpAt = 16f, EndAt = 20f;
 
         int _standSamples, _downFrames, _falls, _recoveries;
+        // Falls DURING THE WALK, counted separately. The probe deliberately makes the
+        // character go limp later on, and lumping that in with stability measured the test
+        // rather than the controller - it read as "on the floor 9% of the time" when the
+        // walk itself had stopped falling entirely.
+        int _walkFalls, _walkDownFrames;
         float _tiltSum, _tiltMax;
-        bool _wasDown;
+        bool _wasDown, _wasDownWalk;
         Vector3 _walkStart;
         bool _walkStarted;
         bool _grabTried, _grabWorked;
@@ -74,6 +79,9 @@ namespace Party.Ragdoll
             else if (t < WalkUntil)
             {
                 if (!_walkStarted) { _walkStarted = true; _walkStart = pelvis.position; }
+                if (_m.IsDown) _walkDownFrames++;
+                if (_m.IsDown && !_wasDownWalk) _walkFalls++;
+                _wasDownWalk = _m.IsDown;
                 // Walk at the crate, so the grab phase has something in reach.
                 Vector3 to = target != null
                     ? (target.position - pelvis.position)
@@ -132,6 +140,7 @@ namespace Party.Ragdoll
             Debug.Log($"[Probe] STAND tilt_avg={avg:F1} tilt_max={_tiltMax:F1}");
             Debug.Log($"[Probe] WALK dist={walked:F2}");
             Debug.Log($"[Probe] STABILITY falls={_falls} recoveries={_recoveries} down_frames={_downFrames}");
+            Debug.Log($"[Probe] WALKSTABILITY falls={_walkFalls} down_frames={_walkDownFrames}");
             Debug.Log($"[Probe] GRAB worked={_grabWorked} carried={_carriedDist:F2}");
             Debug.Log($"[Probe] THROW speed={_throwSpeed:F2}");
             Debug.Log($"[Probe] LIMP tilt={_limpTilt:F1}");
