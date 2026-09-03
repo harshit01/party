@@ -26,11 +26,19 @@ namespace Party.Ragdoll
         [Tooltip("Above this force the grip tears - so a heavy thing CAN be wrestled away.")]
         public float gripStrength = 1400f;
 
+        [Header("Throwing")]
+        [Tooltip("Base heave along the facing on release, so a standing throw goes somewhere.")]
+        public float heaveSpeed = 4.2f;
+        [Tooltip("How much of the hand's own speed carries into the thrown object.")]
+        public float swingCarry = 0.8f;
+
         [Header("Reaching")]
         [Tooltip("How far the arms swing forward while the grab button is held.")]
         public float reachAngle = 62f;
 
         public bool Holding => _left != null || _right != null;
+        /// <summary>Whatever is currently in a hand, so a test can check it actually follows.</summary>
+        public Rigidbody Held => _heldL != null ? _heldL : _heldR;
 
         RagdollMuscles _m;
         Joint _left, _right;
@@ -134,23 +142,35 @@ namespace Party.Ragdoll
         }
 
         /// <summary>
-        /// Let go. No impulse is added: the thing already has the velocity your swing gave it,
-        /// and adding more is what makes a throw feel like a catapult instead of a heave.
-        /// The small nudge below only stops a released body immediately re-colliding with the
-        /// hand that dropped it.
+        /// Let go, and heave.
+        ///
+        /// PURE MOMENTUM WAS NOT ENOUGH, and measurement is what showed it. The first version
+        /// added no impulse at all on the theory that the swing you built is the throw. It is
+        /// a lovely theory and it produces a release speed of 0.74 m/s when you are standing
+        /// still - which is a drop, not a throw, and leaves no way to deliberately lob
+        /// anything without first running in a circle.
+        ///
+        /// So the swing still dominates - whatever velocity the hand had is already in the
+        /// held body - and a modest heave is added along the facing, so standing still and
+        /// letting go puts the thing somewhere rather than on your feet.
         /// </summary>
         void Throw(ref Joint j, ref Rigidbody held)
         {
             if (j == null) { held = null; return; }
             Destroy(j);
             j = null;
+            if (held == null) return;
 
-            if (held != null)
-            {
-                Vector3 away = (held.position - transform.position).normalized;
-                held.AddForce(away * 0.6f, ForceMode.VelocityChange);
-                held = null;
-            }
+            Rigidbody hand = _m.Rig.Get(Bone.LowerArmR) ?? _m.Rig.Get(Bone.LowerArmL);
+            Vector3 swing = hand != null ? hand.linearVelocity : Vector3.zero;
+
+            Vector3 facing = _m.Rig.Anchor != null
+                ? _m.Rig.Anchor.transform.forward
+                : transform.forward;
+
+            held.AddForce(swing * swingCarry + (facing + Vector3.up * 0.35f).normalized * heaveSpeed,
+                          ForceMode.VelocityChange);
+            held = null;
         }
     }
 }

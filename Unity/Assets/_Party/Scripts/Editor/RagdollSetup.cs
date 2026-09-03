@@ -44,7 +44,7 @@ namespace Party.EditorTools
             // heavy one drags you round, and you should be able to feel which is which
             // through the grab alone.
             Material crateMat = PresentationSetup.Lit("Crate", new Color(1f, 0.71f, 0.30f), 0.3f);
-            for (int i = 0; i < (soloEarly ? 0 : 8); i++)
+            for (int i = 0; i < ((soloEarly || System.Environment.GetEnvironmentVariable("RAGDOLL_PROBE") == "1") ? 0 : 8); i++)
             {
                 GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 box.name = $"Crate {i}";
@@ -58,6 +58,34 @@ namespace Party.EditorTools
             }
 
             // The player, plus three bots to have something to grab that grabs back.
+            // RAGDOLL_PROBE=1 builds the VERIFICATION scene: one character, one crate at a
+            // known place, and a script that walks it over, grabs, carries, throws and goes
+            // limp - each step measured. Grab and throw cannot be exercised any other way
+            // headlessly, so without this they ship untested.
+            bool probe = System.Environment.GetEnvironmentVariable("RAGDOLL_PROBE") == "1";
+            if (probe)
+            {
+                GameObject crate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                crate.name = "ProbeCrate";
+                crate.transform.localScale = Vector3.one * 0.5f;
+                crate.transform.position = new Vector3(0f, 0.35f, 1.5f);
+                crate.GetComponent<Renderer>().sharedMaterial =
+                    PresentationSetup.Lit("Crate", new Color(1f, 0.71f, 0.30f), 0.3f);
+                var crb = crate.AddComponent<Rigidbody>();
+                crb.mass = 1.2f;
+                crb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+                GameObject actor = new GameObject("Probe");
+                actor.transform.position = new Vector3(0f, 0f, -2.5f);
+                actor.AddComponent<RagdollMuscles>();
+                var dr = actor.AddComponent<RagdollDriver>();
+                dr.livery = new Color(0.92f, 0.28f, 0.45f);
+                dr.bot = false;               // the probe drives it, not the bot policy
+                dr.probeDriven = true;
+                var pr = actor.AddComponent<RagdollProbe>();
+                pr.target = crb;
+            }
+
             // RAGDOLL_SOLO=1 builds one still character on an empty floor. Tuning a balance
             // controller with four bots barging each other over crates means every wobble has
             // four possible causes; this is the same "change one thing" discipline the build
@@ -65,8 +93,8 @@ namespace Party.EditorTools
             bool solo = soloEarly;
             // In solo mode the lone character is a BOT, so it walks - a controller that only
             // holds a still pose is not evidence of anything.
-            MakeActor("Player", new Vector3(0f, 0f, -3f), new Color(0.92f, 0.28f, 0.45f), solo);
-            if (!solo)
+            if (!probe) MakeActor("Player", new Vector3(0f, 0f, -3f), new Color(0.92f, 0.28f, 0.45f), solo);
+            if (!solo && !probe)
             {
                 MakeActor("Bot A", new Vector3(-2.5f, 0f, 1f), new Color(0.36f, 0.88f, 0.90f), true);
                 MakeActor("Bot B", new Vector3( 2.5f, 0f, 1f), new Color(1f, 0.82f, 0.34f), true);

@@ -18,6 +18,8 @@ namespace Party.Ragdoll
         public float jumpImpulse = 5.2f;
         [Tooltip("No keyboard: wander and grab at random. Used for the test scene's extras.")]
         public bool bot;
+        [Tooltip("RagdollProbe is driving this one - do not read input or the two will fight.")]
+        public bool probeDriven;
 
         RagdollMuscles _m;
         RagdollGrab _grab;
@@ -38,6 +40,7 @@ namespace Party.Ragdoll
         void Update()
         {
             if (_m == null || _m.Rig == null) return;
+            if (probeDriven) return;   // the probe sets MoveInput and grab itself
 
             if (bot) { BotThink(); return; }
 

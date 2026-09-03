@@ -1,0 +1,7 @@
+[Probe] STAND tilt_avg=61.4 tilt_max=118.0
+[Probe] WALK dist=0.31
+[Probe] STABILITY falls=7 recoveries=0 down_frames=820
+[Probe] GRAB worked=False carried=0.00
+[Probe] THROW speed=0.74
+[Probe] LIMP tilt=12.0
+NullReferenceException: Object reference not set to an instance of an object
