@@ -65,6 +65,46 @@ namespace Party
         void OnLookChanged(int _, int __) => BuildLook();
         void OnStandingChanged(float _, float now) { if (_filament != null) _filament.standing = now; }
 
+        /// <summary>
+        /// Build an ACTIVE RAGDOLL instead of the decorative look, and sync every bone.
+        ///
+        /// Switched on per-scene rather than replacing the look outright, because the cost
+        /// is the open question: one synced transform per player becomes ten, and that has
+        /// to be measured before it goes anywhere near the minigames.
+        /// </summary>
+        /// SyncVar, so it reaches the client in the spawn payload - OnStartClient reads it
+        /// to decide what to build, and a plain field would still be false there.
+        [SyncVar] public bool useRagdoll;
+
+        Ragdoll.RagdollMuscles _ragdoll;
+
+        void BuildRagdoll()
+        {
+            Transform host = juiceVisual != null ? juiceVisual : transform;
+            var rig = Ragdoll.RagdollBuilder.Build(host, colour);
+
+            _ragdoll = gameObject.GetComponent<Ragdoll.RagdollMuscles>();
+            if (_ragdoll == null) _ragdoll = gameObject.AddComponent<Ragdoll.RagdollMuscles>();
+            _ragdoll.Bind(rig);
+
+            // ONE sync component, already on the prefab, that writes every bone.
+            //
+            // The first attempt added a NetworkTransform per bone at runtime. Mirror indexes
+            // NetworkBehaviours by component order at spawn, so runtime-added ones break
+            // serialisation outright - it threw 128,448 NullReferenceExceptions in thirty
+            // seconds. And the bones are built at runtime, so they cannot be on the prefab
+            // either. One component writing all ten is both correct and cheaper.
+            Ragdoll.RagdollSync sync = GetComponent<Ragdoll.RagdollSync>();
+            if (sync != null) sync.Bind(rig);
+
+            // TURN OFF THE ROOT NetworkTransform. With a ragdoll it is syncing a transform
+            // nothing renders - the visible body is the ten bones, which RagdollSync already
+            // sends - so it is pure duplicated bandwidth on a link that is already carrying
+            // 4.7x what the capsule did.
+            NetworkTransformBase root = GetComponent<NetworkTransformBase>();
+            if (root != null) root.enabled = false;
+        }
+
         void BuildLook()
         {
             Transform host = juiceVisual != null ? juiceVisual : transform;
@@ -157,6 +197,7 @@ namespace Party
 
         public override void OnStartClient()
         {
+            if (useRagdoll) { BuildRagdoll(); ApplyName(); return; }
             BuildLook();
             ApplyName();
             ApplyColour();

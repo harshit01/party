@@ -17,6 +17,11 @@ namespace Party
         [Tooltip("Total participants including bots. 2-8.")]
         [Range(2, 8)] public int targetParticipants = 2;
 
+        [Tooltip("Spawn ACTIVE RAGDOLLS rather than the single-capsule look. Ten synced " +
+                 "transforms per player instead of one - set per scene while the cost is " +
+                 "being measured.")]
+        public bool spawnRagdolls;
+
         [Tooltip("Capsule prefab used for bots. Usually the same as playerPrefab.")]
         public GameObject botPrefab;
 
@@ -171,6 +176,7 @@ namespace Party
             int slot = ClaimSlot();
             PartyPlayer p = go.GetComponent<PartyPlayer>();
             p.isBot       = false;
+            p.useRagdoll  = spawnRagdolls;
             p.slot        = slot;
             p.displayName = "Player " + (conn.connectionId);
             p.colour      = Palette[slot % Palette.Length];
@@ -210,6 +216,7 @@ namespace Party
                 int slot = ClaimSlot();
                 PartyPlayer p = go.GetComponent<PartyPlayer>();
                 p.isBot       = true;
+                p.useRagdoll  = spawnRagdolls;
                 p.slot        = slot;
                 p.displayName = BotNames[slot % BotNames.Length];
                 p.colour      = Palette[slot % Palette.Length];

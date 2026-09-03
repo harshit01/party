@@ -1,8 +1,10 @@
 using kcp2k;
+using Mirror;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using Party;
 using Party.Ragdoll;
 
 namespace Party.EditorTools
@@ -121,6 +123,14 @@ namespace Party.EditorTools
             camGo.AddComponent<RagdollLabHUD>();
             camGo.AddComponent<LabAutoShot>();
 
+            // RAGDOLL_NET=1 builds a NETWORKED lab instead: a real PartyNetworkManager
+            // spawning ragdoll players, plus a probe that reads Mirror's own diagnostics.
+            // The cost of ten synced transforms per player has been an arithmetic guess
+            // since the ragdoll existed, and guessing at bandwidth is how you find out in a
+            // playtest with four people waiting.
+            if (System.Environment.GetEnvironmentVariable("RAGDOLL_NET") == "1")
+                AddNetworking();
+
             System.IO.Directory.CreateDirectory("Assets/_Party/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);
 
@@ -130,6 +140,54 @@ namespace Party.EditorTools
             EditorBuildSettings.scenes = list.ToArray();
 
             Debug.Log("[Party] Ragdoll lab built.");
+        }
+
+        static void AddNetworking()
+        {
+            GameObject playerPrefab =
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Party/Prefabs/PartyPlayer.prefab");
+            if (playerPrefab == null)
+            {
+                Debug.LogError("[Party] player prefab missing - cannot build the networked lab.");
+                return;
+            }
+
+            // RagdollSync must live ON THE PREFAB. Mirror indexes NetworkBehaviours by
+            // component order at spawn, so it cannot be added at runtime - that was the
+            // first attempt and it threw 128,448 exceptions in half a minute.
+            if (playerPrefab.GetComponent<RagdollSync>() == null)
+            {
+                playerPrefab.AddComponent<RagdollSync>();
+                EditorUtility.SetDirty(playerPrefab);
+                AssetDatabase.SaveAssets();
+                Debug.Log("[Party] added RagdollSync to the player prefab");
+            }
+
+            GameObject netGo = new GameObject("NetworkManager");
+            KcpTransport kcp = netGo.AddComponent<KcpTransport>();
+            netGo.AddComponent<SteamBoot>();
+
+            PartyNetworkManager nm = netGo.AddComponent<PartyNetworkManager>();
+            nm.transport = kcp;
+            nm.localTransport = kcp;
+            nm.playerPrefab = playerPrefab;
+            nm.targetParticipants = 8;      // worst case, which is the number that matters
+            // RAGDOLL_NET_BASELINE=1 builds the SAME scene with the old single-capsule
+            // players, so the ragdoll's marginal cost is a comparison rather than a number
+            // floating on its own.
+            nm.spawnRagdolls = System.Environment.GetEnvironmentVariable("RAGDOLL_NET_BASELINE") != "1";
+            nm.headlessStartMode = HeadlessStartOptions.DoNothing;
+
+            netGo.AddComponent<MilestoneAutoRun>();
+            netGo.AddComponent<NetTrafficProbe>();
+
+            for (int i = 0; i < 8; i++)
+            {
+                float a = i / 8f * Mathf.PI * 2f;
+                GameObject sp = new GameObject($"Start {i}");
+                sp.transform.position = new Vector3(Mathf.Sin(a) * 4f, 1.1f, Mathf.Cos(a) * 4f);
+                sp.AddComponent<NetworkStartPosition>();
+            }
         }
 
         static void MakeActor(string name, Vector3 pos, Color livery, bool bot)
