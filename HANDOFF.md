@@ -66,7 +66,37 @@ keyboard**, hosted by an AI presenter who genuinely watched you play and remembe
   deciding whether the host treats bots as characters in their own right or mostly
   ignores them.
 
-### SOLVED (Sep 2026) — Red Light builds were intermittently corrupt
+### SOLVED AT THE ROOT (Sep 2026) — multiple MonoBehaviours in one file
+
+**Unity resolves serialised script references BY FILE NAME.** A MonoBehaviour living in a
+file named after something else cannot be read back out of a scene, and it presents as
+`level0 is corrupted` — "a MonoBehaviour deserialising past the end of the data", the
+phrase already recorded three separate times in this codebase.
+
+Three files were doing it, and all three feed scenes:
+
+| file | classes | scene |
+|---|---|---|
+| `RedLight/Hazards.cs` | `SweeperBar` + `PistonBlock` | Red Light |
+| `Arena/ArenaKit.cs` | six arena components | Plank |
+| `Character/PosterMotion.cs` | `PosterMotion` + `BuntingSway` + `LightRays` | Menu |
+
+Measured on the same 8-build experiment both ways:
+
+| | result |
+|---|---|
+| multi-behaviour files | **3/8** — a coin flip |
+| one file per class | **8/8** — every build |
+
+**The rule: one MonoBehaviour per file, named after the class.** A runtime-only component
+(added with `AddComponent`, never saved into a scene) is not exposed — which is why this
+looked random for months. It depended on which scene, and on nothing the earlier
+investigation was looking at.
+
+It surfaced because the animated Plank arena made that scene corrupt on **12 builds out of
+12** — deterministic instead of intermittent, and therefore findable.
+
+### The earlier workaround, kept but no longer load-bearing
 
 **The scene was the problem, not the build.** Measured one condition at a time
 (`Docs/build_experiments.tsv`, `WORKLOG.md`):
@@ -271,7 +301,14 @@ In the editor: open `Assets/_Party/Scenes/Menu.unity` and press Play.
 9. **For anything visual, get a reference image FIRST.** Three visual passes were spent
    guessing at a look the founder could show in one screenshot. `Docs/ArtTarget/` exists
    for this: agree the target, then build to it and compare.
-10. **A per-frame probability inside a multi-second window is a certainty with extra
+10. **One MonoBehaviour per file, named after the class.** Unity resolves serialised
+   script references by FILE NAME, so a component in a file named after something else
+   cannot be read back out of a scene — it presents as `level0 is corrupted`. This was
+   the intermittent build bug from August to September; three files were doing it and the
+   fix took builds from 3/8 to 8/8. Runtime-only components are not exposed, which is
+   exactly why it looked random.
+
+11. **A per-frame probability inside a multi-second window is a certainty with extra
    steps.** Three instances of this exact shape were found in one night (Sep 2026):
    `WouldFrame` rolled every frame of a STOP made "rarer than sparing" into the same
    victim being framed in 6 of 6 rounds; a bot's "small twitch chance" of 2% per frame
@@ -281,7 +318,7 @@ In the editor: open `Assets/_Party/Scenes/Menu.unity` and press Play.
    was already gated at 5-30% per stop, so fixing the inner roll barely moved the outcome
    and a confident prediction that it would was wrong.
 
-11. **Small models fail stacked NEGATIVE constraints.** gpt-4o-mini obeyed an
+12. **Small models fail stacked NEGATIVE constraints.** gpt-4o-mini obeyed an
    anti-parrot rule ~75% of the time; gpt-4o reliably.
 
 ## 7. Moving machines
