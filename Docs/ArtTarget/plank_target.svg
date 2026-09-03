@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Luckiest Guy','Arial Rounded MT Bold',Arial,sans-serif">
+<!--
+  PLANK PANIC - art target.
+  Drawn AFTER seeing the built version fail, and every note here is a specific fix for
+  something visibly wrong in that screenshot rather than a general aspiration.
+-->
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#1d7fd6"/><stop offset="52%" stop-color="#79c6ef"/>
+    <stop offset="100%" stop-color="#ffd9c2"/>
+  </linearGradient>
+  <linearGradient id="void" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#5b4a8f" stop-opacity="0"/>
+    <stop offset="55%" stop-color="#3a2b63" stop-opacity="0.75"/>
+    <stop offset="100%" stop-color="#1b1233"/>
+  </linearGradient>
+  <linearGradient id="deckA" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffc46b"/><stop offset="100%" stop-color="#e8973a"/>
+  </linearGradient>
+  <linearGradient id="deckB" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ff9dc0"/><stop offset="100%" stop-color="#e85f92"/>
+  </linearGradient>
+  <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#8f83c4"/><stop offset="50%" stop-color="#b9aee6"/>
+    <stop offset="100%" stop-color="#7a6eb0"/>
+  </linearGradient>
+  <linearGradient id="stand" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#6f5fa8"/><stop offset="100%" stop-color="#463a72"/>
+  </linearGradient>
+  <linearGradient id="lower3" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#2a1350" stop-opacity="0.92"/>
+    <stop offset="100%" stop-color="#3b1c68" stop-opacity="0"/>
+  </linearGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
+  <filter id="far"><feGaussianBlur stdDeviation="3.5"/></filter>
+  <filter id="drop"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#25184a" flood-opacity="0.55"/></filter>
+  <filter id="txt"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#2b1250" flood-opacity="0.85"/></filter>
+</defs>
+
+<rect width="1920" height="1080" fill="url(#sky)"/>
+
+<!-- ================= THE DROP, which the built version simply does not have ================= -->
+<!-- The whole premise is a long fall. Without depth under the plank there is no jeopardy,
+     and the screenshot has none - the deck just floats on flat sky. -->
+<rect x="0" y="470" width="1920" height="610" fill="url(#void)"/>
+<g filter="url(#far)" opacity="0.5">
+  <rect x="250" y="700" width="150" height="380" rx="14" fill="#2e2154"/>
+  <rect x="470" y="760" width="120" height="320" rx="14" fill="#281d4a"/>
+  <rect x="1350" y="720" width="140" height="360" rx="14" fill="#2e2154"/>
+  <rect x="1580" y="790" width="120" height="290" rx="14" fill="#281d4a"/>
+</g>
+
+<!-- ================= CROWD: SMALL, TIERED, BEHIND A BARRIER ================= -->
+<!-- In the build these are capsules the size of the players, floating in mid-air with no
+     stand under them. They should be small, far, and clearly seated in something. -->
+<g filter="url(#far)">
+  <path d="M 0 452 L 470 452 L 470 560 L 0 596 Z" fill="url(#stand)"/>
+  <path d="M 1450 452 L 1920 452 L 1920 596 L 1450 560 Z" fill="url(#stand)"/>
+  <g opacity="0.92">
+    <g fill="#a99ad8"><circle cx="40" cy="470" r="11"/><circle cx="88" cy="466" r="11"/><circle cx="136" cy="471" r="11"/><circle cx="184" cy="465" r="11"/><circle cx="232" cy="470" r="11"/><circle cx="280" cy="466" r="11"/><circle cx="328" cy="471" r="11"/><circle cx="376" cy="466" r="11"/><circle cx="424" cy="470" r="11"/></g>
+    <g fill="#8fa3d8"><circle cx="64" cy="500" r="11"/><circle cx="112" cy="496" r="11"/><circle cx="160" cy="501" r="11"/><circle cx="208" cy="495" r="11"/><circle cx="256" cy="500" r="11"/><circle cx="304" cy="496" r="11"/><circle cx="352" cy="501" r="11"/><circle cx="400" cy="496" r="11"/></g>
+    <g fill="#c8a8d0"><circle cx="40" cy="530" r="11"/><circle cx="88" cy="526" r="11"/><circle cx="136" cy="531" r="11"/><circle cx="184" cy="525" r="11"/><circle cx="232" cy="530" r="11"/><circle cx="280" cy="526" r="11"/><circle cx="328" cy="531" r="11"/><circle cx="376" cy="526" r="11"/></g>
+    <g fill="#a99ad8"><circle cx="1500" cy="470" r="11"/><circle cx="1548" cy="466" r="11"/><circle cx="1596" cy="471" r="11"/><circle cx="1644" cy="465" r="11"/><circle cx="1692" cy="470" r="11"/><circle cx="1740" cy="466" r="11"/><circle cx="1788" cy="471" r="11"/><circle cx="1836" cy="466" r="11"/><circle cx="1884" cy="470" r="11"/></g>
+    <g fill="#8fa3d8"><circle cx="1524" cy="500" r="11"/><circle cx="1572" cy="496" r="11"/><circle cx="1620" cy="501" r="11"/><circle cx="1668" cy="495" r="11"/><circle cx="1716" cy="500" r="11"/><circle cx="1764" cy="496" r="11"/><circle cx="1812" cy="501" r="11"/><circle cx="1860" cy="496" r="11"/></g>
+  </g>
+</g>
+
+<!-- ================= GANTRY: the hammers must hang from SOMETHING ================= -->
+<!-- In the build they are sausages on strings that leave the top of frame attached to
+     nothing. A visible frame is what makes a hazard read as machinery. -->
+<g filter="url(#soft)" opacity="0.95">
+  <rect x="618" y="120" width="26" height="360" fill="url(#steel)"/>
+  <rect x="1276" y="120" width="26" height="360" fill="url(#steel)"/>
+  <rect x="600" y="104" width="720" height="30" rx="14" fill="url(#steel)"/>
+  <rect x="596" y="96" width="36" height="46" rx="10" fill="#6d61a4"/>
+  <rect x="1288" y="96" width="36" height="46" rx="10" fill="#6d61a4"/>
+</g>
+
+<!-- pendulums, hung from the gantry beam and clearly jointed to it -->
+<g filter="url(#drop)">
+  <circle cx="800" cy="128" r="13" fill="#5a4f92"/>
+  <rect x="794" y="128" width="12" height="180" fill="#7c70b4"/>
+  <ellipse cx="800" cy="336" rx="62" ry="44" fill="#3fd0d8"/>
+  <ellipse cx="800" cy="326" rx="52" ry="32" fill="#68e6ec" opacity="0.65"/>
+
+  <circle cx="1120" cy="128" r="13" fill="#5a4f92"/>
+  <rect x="1114" y="128" width="12" height="230" fill="#7c70b4"/>
+  <ellipse cx="1120" cy="388" rx="58" ry="42" fill="#3fd0d8"/>
+  <ellipse cx="1120" cy="378" rx="48" ry="30" fill="#68e6ec" opacity="0.65"/>
+</g>
+
+<!-- bunting, ATTACHED between the gantry posts and sagging under gravity -->
+<path d="M 630 140 Q 960 250 1290 140" stroke="#ffd257" stroke-width="5" fill="none"/>
+<g fill="#ff7fae">
+  <path d="M 700 168 l 26 0 l -13 34 Z"/><path d="M 770 192 l 26 0 l -13 34 Z"/>
+  <path d="M 840 208 l 26 0 l -13 34 Z"/><path d="M 910 216 l 26 0 l -13 34 Z"/>
+  <path d="M 980 216 l 26 0 l -13 34 Z"/><path d="M 1050 208 l 26 0 l -13 34 Z"/>
+  <path d="M 1120 192 l 26 0 l -13 34 Z"/><path d="M 1190 168 l 26 0 l -13 34 Z"/>
+</g>
+
+<!-- ================= THE PLANK: ONE solid beam in perspective ================= -->
+<!-- The build made seven separated slabs with gaps, which read as loose paper. It should be
+     one continuous beam with segment JOINTS drawn on it, receding to a vanishing point. -->
+<path d="M 872 470 L 1048 470 L 1420 1080 L 500 1080 Z" fill="url(#deckA)"/>
+<g opacity="0.55">
+  <path d="M 886 512 L 1034 512 L 1046 556 L 874 556 Z" fill="url(#deckB)"/>
+  <path d="M 862 604 L 1058 604 L 1076 664 L 844 664 Z" fill="url(#deckB)"/>
+  <path d="M 830 724 L 1090 724 L 1116 806 L 804 806 Z" fill="url(#deckB)"/>
+  <path d="M 788 884 L 1132 884 L 1170 1000 L 750 1000 Z" fill="url(#deckB)"/>
+</g>
+<!-- rounded edge rails, so it reads as inflatable rather than as a plank of MDF -->
+<path d="M 872 470 L 884 470 L 530 1080 L 500 1080 Z" fill="#ffdca0"/>
+<path d="M 1036 470 L 1048 470 L 1420 1080 L 1390 1080 Z" fill="#ffdca0"/>
+
+<!-- ================= CHARACTERS: BIG, and clearly on the beam ================= -->
+<!-- Roughly 22% of frame height for the nearest. In the build they are small specks and the
+     scenery is the loudest thing on screen. -->
+<g filter="url(#drop)">
+  <!-- far pair, small -->
+  <g><ellipse cx="946" cy="566" rx="26" ry="7" fill="#3a2b63" opacity="0.35"/>
+     <rect x="928" y="500" width="36" height="62" rx="18" fill="#4fa8e8"/>
+     <circle cx="946" cy="494" r="22" fill="#e9f3ff"/></g>
+  <g><ellipse cx="1010" cy="628" rx="30" ry="8" fill="#3a2b63" opacity="0.35"/>
+     <rect x="988" y="548" width="44" height="76" rx="22" fill="#ffc94d"/>
+     <circle cx="1010" cy="540" r="26" fill="#e9f3ff"/></g>
+
+  <!-- near pair, GRAPPLING - the game is shoving, so the target should show shoving -->
+  <g transform="rotate(-9 812 880)">
+    <ellipse cx="812" cy="988" rx="66" ry="16" fill="#3a2b63" opacity="0.4"/>
+    <rect x="756" y="770" width="112" height="196" rx="56" fill="#e8447e"/>
+    <rect x="726" y="800" width="34" height="118" rx="17" fill="#f2699a"/>
+    <rect x="864" y="792" width="34" height="118" rx="17" fill="#f2699a"/>
+    <circle cx="812" cy="752" r="66" fill="#eaf4ff" opacity="0.92"/>
+    <path d="M 786 726 q 26 -34 52 0 q 26 34 -6 46" stroke="#ffd257" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <circle cx="792" cy="748" r="11" fill="#1b1233"/><circle cx="836" cy="748" r="11" fill="#1b1233"/>
+  </g>
+  <g transform="rotate(13 1004 878)">
+    <ellipse cx="1004" cy="986" rx="64" ry="15" fill="#3a2b63" opacity="0.4"/>
+    <rect x="950" y="774" width="108" height="192" rx="54" fill="#5fd6a8"/>
+    <rect x="922" y="800" width="32" height="114" rx="16" fill="#84e6c2"/>
+    <rect x="1054" y="796" width="32" height="114" rx="16" fill="#84e6c2"/>
+    <circle cx="1004" cy="756" r="64" fill="#eaf4ff" opacity="0.92"/>
+    <path d="M 980 730 q 24 -32 48 0 q 24 32 -6 44" stroke="#ff8f6b" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <circle cx="986" cy="752" r="10" fill="#1b1233"/><circle cx="1026" cy="752" r="10" fill="#1b1233"/>
+  </g>
+</g>
+
+<!-- one falling, because the signature is falling off having touched nobody -->
+<g opacity="0.9" filter="url(#soft)" transform="rotate(154 1330 700)">
+  <rect x="1300" y="660" width="60" height="106" rx="30" fill="#a98bff"/>
+  <circle cx="1330" cy="646" r="34" fill="#eaf4ff" opacity="0.9"/>
+</g>
+
+<!-- ================= HUD ================= -->
+<text x="960" y="176" font-size="128" fill="#ffd257" text-anchor="middle" filter="url(#txt)" letter-spacing="6">SHOVE!</text>
+<g filter="url(#txt)">
+  <rect x="1610" y="52" width="258" height="104" rx="26" fill="#2a1350" opacity="0.66"/>
+  <text x="1739" y="98" font-size="26" fill="#c3b2ff" text-anchor="middle" letter-spacing="3">STILL ON</text>
+  <text x="1739" y="140" font-size="42" fill="#ffffff" text-anchor="middle">4 / 5</text>
+</g>
+<g>
+  <rect x="0" y="964" width="1420" height="116" fill="url(#lower3)"/>
+  <circle cx="82" cy="1020" r="36" fill="#ffd257"/>
+  <text x="82" y="1034" font-size="36" fill="#4a2a00" text-anchor="middle">B</text>
+  <text x="144" y="1008" font-size="22" fill="#ffd257" letter-spacing="3">BARNABY QUILL</text>
+  <text x="144" y="1050" font-size="31" fill="#ffffff">“Dimple went off without being touched. A personal best.”</text>
+</g>
+</svg>
