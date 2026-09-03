@@ -157,6 +157,9 @@ namespace Party.Ragdoll
                 for (int j = i + 1; j < all.Count; j++)
                     Physics.IgnoreCollision(all[i], all[j]);
 
+            // Put the character back on top of the physics.
+            RagdollDress.Apply(rig, livery, scale);
+
             return rig;
         }
 
