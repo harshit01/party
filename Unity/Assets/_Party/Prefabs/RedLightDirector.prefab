@@ -65,6 +65,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Party.RedLight.HostVoice
   endpoint: http://127.0.0.1:8790/host/say
   timeoutSeconds: 6
+  gameName: Red Light, Barnaby
 --- !u!114 &7495639423865230124
 MonoBehaviour:
   m_ObjectHideFlags: 0

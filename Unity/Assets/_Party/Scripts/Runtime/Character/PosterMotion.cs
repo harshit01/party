@@ -1,3 +1,9 @@
+// One MonoBehaviour per file, named after the class.
+//
+// PosterMotion.cs held three of them. Unity resolves serialised script references BY FILE
+// NAME, so a component in a file named after something else cannot be read back out of a
+// scene - the cause of the corrupt builds this project fought from August to September.
+// These live in the Menu scene, which had the same exposure.
 using UnityEngine;
 
 namespace Party.Character
@@ -67,80 +73,6 @@ namespace Party.Character
                 layers[i].localPosition = _layerHome[i] +
                     new Vector3(-ox * parallaxStrength * depth,
                                 -oy * parallaxStrength * depth * 0.6f, 0f);
-            }
-        }
-    }
-
-    /// <summary>Bunting that sways like a string in a breeze, each flag lagging the last.</summary>
-    public class BuntingSway : MonoBehaviour
-    {
-        public float amplitude = 5.5f;
-        public float speed = 1.1f;
-
-        Transform[] _flags;
-        float[] _phase;
-
-        void Start()
-        {
-            int n = transform.childCount;
-            _flags = new Transform[n];
-            _phase = new float[n];
-            for (int i = 0; i < n; i++)
-            {
-                _flags[i] = transform.GetChild(i);
-                _phase[i] = i * 0.42f;          // travelling wave along the string
-            }
-        }
-
-        void Update()
-        {
-            if (_flags == null) return;
-            for (int i = 0; i < _flags.Length; i++)
-            {
-                if (_flags[i] == null) continue;
-                float a = Mathf.Sin(Time.time * speed + _phase[i]) * amplitude;
-                _flags[i].localRotation = Quaternion.Euler(0f, 0f, 180f + a);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Soft light rays sweeping across the frame. Additive, unlit, and slow - the thing
-    /// that most reliably turns a flat backdrop into something that feels lit.
-    /// </summary>
-    public class LightRays : MonoBehaviour
-    {
-        public float speed = 2.4f;
-        public float breathe = 0.18f;
-
-        Transform[] _rays;
-        float[] _phase;
-        Vector3[] _baseScale;
-
-        void Start()
-        {
-            int n = transform.childCount;
-            _rays = new Transform[n];
-            _phase = new float[n];
-            _baseScale = new Vector3[n];
-            for (int i = 0; i < n; i++)
-            {
-                _rays[i] = transform.GetChild(i);
-                _phase[i] = Random.Range(0f, 10f);
-                _baseScale[i] = _rays[i].localScale;
-            }
-        }
-
-        void Update()
-        {
-            if (_rays == null) return;
-            transform.Rotate(Vector3.forward, speed * Time.deltaTime, Space.Self);
-            for (int i = 0; i < _rays.Length; i++)
-            {
-                if (_rays[i] == null) continue;
-                float w = 1f + Mathf.Sin(Time.time * 0.6f + _phase[i]) * breathe;
-                Vector3 s = _baseScale[i];
-                _rays[i].localScale = new Vector3(s.x * w, s.y, s.z);
             }
         }
     }

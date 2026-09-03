@@ -27,19 +27,47 @@
 # it - then COMMIT the result.
 #
 # Usage:
-#   ./Tools/build_verified.sh            build the committed scene and verify it
-#   ./Tools/build_verified.sh -r         regenerate the scene first, retry until good
+#   ./Tools/build_verified.sh [game]        build the committed scene and verify it
+#   ./Tools/build_verified.sh [game] -r     regenerate first, retry until it boots
+#
+# game is redlight (default), saywhat, plank or ragdoll.
 set -uo pipefail
 
 UNITY="/Applications/Unity/Hub/Editor/6000.5.9f1/Unity.app/Contents/MacOS/Unity"
 PROJECT="$(cd "$(dirname "$0")/.." && pwd)/Unity"
-SCENE="Unity/Assets/_Party/Scenes/RedLight.unity"
-OUT_DIR="Unity/Build/MacRedLight"
-BUILD_METHOD="Party.EditorTools.BuildTools.BuildMacRedLight"
-SCENE_METHOD="Party.EditorTools.RedLightSetup.Build"
+
+# ONE TOOL FOR EVERY MINIGAME. This was hardcoded to Red Light, so when Plank Panic was
+# built it rolled the corrupt-scene dice on every build with nothing catching it - the
+# player came out with a corrupt level0 and simply never started, silently.
+GAME="${GAME:-redlight}"
+for a in "$@"; do
+  case "$a" in
+    redlight|saywhat|plank|ragdoll) GAME="$a" ;;
+  esac
+done
+
+case "$GAME" in
+  redlight) SCENE="Unity/Assets/_Party/Scenes/RedLight.unity"
+            OUT_DIR="Unity/Build/MacRedLight"
+            BUILD_METHOD="Party.EditorTools.BuildTools.BuildMacRedLight"
+            SCENE_METHOD="Party.EditorTools.RedLightSetup.Build" ;;
+  saywhat)  SCENE="Unity/Assets/_Party/Scenes/SayWhat.unity"
+            OUT_DIR="Unity/Build/MacSayWhat"
+            BUILD_METHOD="Party.EditorTools.BuildTools.BuildMacSayWhat"
+            SCENE_METHOD="Party.EditorTools.SayWhatSetup.Build" ;;
+  plank)    SCENE="Unity/Assets/_Party/Scenes/Plank.unity"
+            OUT_DIR="Unity/Build/MacPlank"
+            BUILD_METHOD="Party.EditorTools.BuildTools.BuildMacPlank"
+            SCENE_METHOD="Party.EditorTools.PlankSetup.Build" ;;
+  ragdoll)  SCENE="Unity/Assets/_Party/Scenes/RagdollLab.unity"
+            OUT_DIR="Unity/Build/MacRagdoll"
+            BUILD_METHOD="Party.EditorTools.BuildTools.BuildMacRagdoll"
+            SCENE_METHOD="Party.EditorTools.RagdollSetup.Build" ;;
+  *) echo "FAIL: unknown game '$GAME' (redlight|saywhat|plank|ragdoll)"; exit 1 ;;
+esac
 
 REGEN=0
-[ "${1:-}" = "-r" ] && REGEN=1
+for a in "$@"; do [ "$a" = "-r" ] && REGEN=1; done
 
 if pgrep -f "Unity.app/Contents/MacOS/Unity" >/dev/null; then
   echo "FAIL: Unity editor is open - it locks the project"; exit 1

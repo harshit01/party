@@ -27,3 +27,11 @@ good-scene-never-regen	3	never	199700	ok
 good-scene-never-regen	4	never	199700	ok
 good-scene-never-regen	5	never	199700	ok
 good-scene-never-regen	6	never	199700	ok
+one-file-per-behaviour	1	yes	199580	ok
+one-file-per-behaviour	2	yes	199584	ok
+one-file-per-behaviour	3	yes	199580	ok
+one-file-per-behaviour	4	yes	199580	ok
+one-file-per-behaviour	5	yes	199584	ok
+one-file-per-behaviour	6	yes	199580	ok
+one-file-per-behaviour	7	yes	199584	ok
+one-file-per-behaviour	8	yes	199572	ok
