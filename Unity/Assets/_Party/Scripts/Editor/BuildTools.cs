@@ -45,6 +45,11 @@ namespace Party.EditorTools
             Run(BuildTarget.StandaloneOSX, "Build/MacRedLight/Party.app",
                 "Assets/_Party/Scenes/RedLight.unity");
 
+        /// <summary>The ragdoll lab - a feel test bed, not a minigame.</summary>
+        public static void BuildMacRagdoll() =>
+            Run(BuildTarget.StandaloneOSX, "Build/MacRagdoll/Party.app",
+                "Assets/_Party/Scenes/RagdollLab.unity");
+
         /// <summary>Say What He Says (#10) only - used by its headless round test.</summary>
         public static void BuildMacSayWhat() =>
             Run(BuildTarget.StandaloneOSX, "Build/MacSayWhat/Party.app",
