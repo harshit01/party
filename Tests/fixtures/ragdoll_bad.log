@@ -2,6 +2,7 @@
 [Probe] WALK dist=0.31
 [Probe] STABILITY falls=7 recoveries=0 down_frames=820
 [Probe] WALKSTABILITY falls=5 down_frames=210
+[Probe] TURNSTABILITY falls=4 down_frames=180
 [Probe] GRAB worked=False carried=0.00
 [Probe] THROW speed=0.74
 [Probe] LIMP tilt=12.0

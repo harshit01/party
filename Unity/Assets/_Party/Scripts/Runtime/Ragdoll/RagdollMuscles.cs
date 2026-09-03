@@ -28,7 +28,12 @@ namespace Party.Ragdoll
         public float uprightTorque = 520f;   // slerp spring on the hip anchor
         public float uprightDamping = 46f;
         [Tooltip("Beyond this tilt it has fallen and stops fighting - the give-up angle.")]
-        public float giveUpAngle = 62f;
+        public float giveUpAngle = 82f;
+        [Tooltip("Past this tilt it fights HARDER to save itself, up to giveUpAngle. " +
+                 "MUST sit above the normal walking lean or it boosts every ordinary step.")]
+        public float stumbleFrom = 56f;
+        [Tooltip("Most it will strain at the edge of a stumble.")]
+        public float stumbleBoost = 2.4f;
         [Tooltip("Extra righting effort while heaving itself back up off the floor.")]
         public float recoveryBoost = 1.8f;
 
@@ -148,11 +153,32 @@ namespace Party.Ragdoll
 
             bool recovering = IsDown && _downSince > 0f && Time.time - _downSince > getUpAfter;
 
-            // The beat on the floor: while down and not yet recovering the spring is off, so
-            // the body genuinely lies there. Something that keeps straining face-down looks
-            // broken; a moment of defeat before it heaves itself up is the joke.
+            // FIGHTING A STUMBLE IS NOT THE SAME AS STANDING STILL.
+            //
+            // Effort used to be flat below the give-up angle and zero above it. So a knock
+            // that tipped the body one degree past the threshold committed it to a full fall
+            // even though it was entirely recoverable. Measured in a POPULATED scene, bots
+            // were on the floor 30-38% of the time while a character walking alone never
+            // fell once in 26 seconds - the falls were collisions with crates and each
+            // other, and most of them were survivable stumbles that the controller simply
+            // gave up on.
+            //
+            // Effort now ramps as it tips, so a stumble is something it fights out of, and
+            // only a committed fall is conceded.
+            //
+            // The beat on the floor stays: while down and not yet recovering the spring is
+            // off, so the body genuinely lies there rather than straining face-down.
+            // stumbleFrom SITS ABOVE THE WALKING LEAN, deliberately. Set to 25 degrees it
+            // fired on every ordinary step - a walk leans at 30-49 degrees - so the body was
+            // permanently over-driven: it walked 8.16 m instead of 6.02 in the same five
+            // seconds, overshot the crate it was supposed to pick up, and started falling
+            // during a straight walk it had previously done cleanly. The two measurements
+            // disagreed, which is what exposed it: collisions in a populated scene got
+            // better while the solo probe got worse.
+            float stumble = Mathf.InverseLerp(stumbleFrom, giveUpAngle, tilt);
+            float effort = Mathf.Lerp(1f, stumbleBoost, stumble);
             float grip = (IsDown && !recovering) ? 0f
-                       : (recovering ? recoveryBoost : 1f) * Tone;
+                       : (recovering ? recoveryBoost : effort) * Tone;
 
             var lin = new JointDrive
             {

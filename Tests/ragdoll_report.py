@@ -22,6 +22,7 @@ PATS = {
     "throw":  re.compile(r"\[Probe\] THROW speed=([\d.-]+)"),
     "limp":   re.compile(r"\[Probe\] LIMP tilt=([\d.-]+)"),
     "walkstab": re.compile(r"\[Probe\] WALKSTABILITY falls=(\d+) down_frames=(\d+)"),
+    "turnstab": re.compile(r"\[Probe\] TURNSTABILITY falls=(\d+) down_frames=(\d+)"),
     "done":   re.compile(r"\[Probe\] DONE"),
 }
 
@@ -77,6 +78,13 @@ def main():
         # A stride that lifts and places the legs took walk falls from constant to zero.
         check(wf == 0, "does not fall over while simply walking",
               f"{wf} falls, {wd} frames down during the 5 s walk")
+
+    if "turnstab" in d:
+        tf, td = int(d["turnstab"][0]), int(d["turnstab"][1])
+        # The case a straight-line walk never tested. Changing direction with the legs
+        # planted is where it actually falls over.
+        check(tf == 0, "does not fall over while CHANGING DIRECTION",
+              f"{tf} falls, {td} frames down over 6 s of 90-degree turns")
 
     if "grab" in d:
         worked, carried = d["grab"][0] == "True", float(d["grab"][1])

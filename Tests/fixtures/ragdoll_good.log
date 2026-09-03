@@ -1,9 +1,10 @@
 [Probe] GRAB attached=true target=ProbeCrate
 [Probe] STAND tilt_avg=0.1 tilt_max=0.4
 [Probe] WALK dist=6.02
-[Probe] STABILITY falls=1 recoveries=1 down_frames=89
+[Probe] STABILITY falls=1 recoveries=1 down_frames=80
 [Probe] WALKSTABILITY falls=0 down_frames=0
-[Probe] GRAB worked=True carried=0.83
-[Probe] THROW speed=7.08
-[Probe] LIMP tilt=86.9
+[Probe] TURNSTABILITY falls=0 down_frames=0
+[Probe] GRAB worked=True carried=0.26
+[Probe] THROW speed=2.87
+[Probe] LIMP tilt=87.6
 [Probe] DONE

@@ -49,9 +49,11 @@ pkill -f 'Contents/MacOS/Party' 2>/dev/null; sleep 1
 rm -f "$LOG"
 # Hard deadline. Trusting the player to exit on its own is the mistake that once left a
 # 6-second smoke test running for 1h37m.
-"$APP" -batchmode -nographics -partyseconds 22 -logFile "$LOG" >/dev/null 2>&1 &
+# 30 s, not 22: the probe's script runs to t=26 since the turning phase was added, and
+# a run cut short reports "no DONE line - it crashed or hung" when nothing crashed at all.
+"$APP" -batchmode -nographics -partyseconds 30 -logFile "$LOG" >/dev/null 2>&1 &
 pid=$!
-for _ in $(seq 1 60); do kill -0 $pid 2>/dev/null || break; sleep 1; done
+for _ in $(seq 1 75); do kill -0 $pid 2>/dev/null || break; sleep 1; done
 kill -9 $pid 2>/dev/null; wait $pid 2>/dev/null
 
 echo

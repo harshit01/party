@@ -23,8 +23,13 @@ namespace Party.Ragdoll
         RagdollGrab _g;
 
         // phase boundaries, seconds
-        const float StandUntil = 4f, WalkUntil = 9f, GrabUntil = 13f, ThrowAt = 13f,
-                    LimpAt = 16f, EndAt = 20f;
+        //
+        // TURNING GETS ITS OWN PHASE. The original script walked in a straight line at a
+        // fixed target and reported "0 falls while walking", which was true and useless -
+        // it never tested the case the founder was actually seeing. Changing direction while
+        // the legs are planted is the hard part, and it was going unmeasured.
+        const float StandUntil = 4f, WalkUntil = 9f, TurnUntil = 15f,
+                    GrabUntil = 19f, LimpAt = 22f, EndAt = 26f;
 
         int _standSamples, _downFrames, _falls, _recoveries;
         // Falls DURING THE WALK, counted separately. The probe deliberately makes the
@@ -32,8 +37,9 @@ namespace Party.Ragdoll
         // rather than the controller - it read as "on the floor 9% of the time" when the
         // walk itself had stopped falling entirely.
         int _walkFalls, _walkDownFrames;
+        int _turnFalls, _turnDownFrames;
         float _tiltSum, _tiltMax;
-        bool _wasDown, _wasDownWalk;
+        bool _wasDown, _wasDownWalk, _wasDownTurn;
         Vector3 _walkStart;
         bool _walkStarted;
         bool _grabTried, _grabWorked;
@@ -89,6 +95,17 @@ namespace Party.Ragdoll
                 to.y = 0f;
                 _m.MoveInput = to.normalized;
             }
+            else if (t < TurnUntil)
+            {
+                // Hard direction changes every 1.2 s - the case a straight-line walk misses.
+                int leg = Mathf.FloorToInt((t - WalkUntil) / 1.2f);
+                float ang = leg * 90f * Mathf.Deg2Rad;
+                _m.MoveInput = new Vector3(Mathf.Sin(ang), 0f, Mathf.Cos(ang));
+
+                if (_m.IsDown) _turnDownFrames++;
+                if (_m.IsDown && !_wasDownTurn) _turnFalls++;
+                _wasDownTurn = _m.IsDown;
+            }
             else if (t < GrabUntil)
             {
                 _m.MoveInput = Vector3.zero;
@@ -141,6 +158,7 @@ namespace Party.Ragdoll
             Debug.Log($"[Probe] WALK dist={walked:F2}");
             Debug.Log($"[Probe] STABILITY falls={_falls} recoveries={_recoveries} down_frames={_downFrames}");
             Debug.Log($"[Probe] WALKSTABILITY falls={_walkFalls} down_frames={_walkDownFrames}");
+            Debug.Log($"[Probe] TURNSTABILITY falls={_turnFalls} down_frames={_turnDownFrames}");
             Debug.Log($"[Probe] GRAB worked={_grabWorked} carried={_carriedDist:F2}");
             Debug.Log($"[Probe] THROW speed={_throwSpeed:F2}");
             Debug.Log($"[Probe] LIMP tilt={_limpTilt:F1}");
