@@ -144,6 +144,8 @@ namespace Party
             // inner game directly would skip the betting entirely.
             if (Prediction.PredictionDirector.Instance != null)
             { Prediction.PredictionDirector.Instance.BeginRound(); return; }
+            if (Plank.PlankDirector.Instance != null)
+            { Plank.PlankDirector.Instance.BeginRound(); return; }
             if (RedLight.RedLightDirector.Instance != null)
             { RedLight.RedLightDirector.Instance.BeginRound(); return; }
             if (SayWhat.SayWhatDirector.Instance != null)
@@ -157,6 +159,8 @@ namespace Party
         {
             if (Prediction.PredictionDirector.Instance != null)
                 return Prediction.PredictionDirector.Instance.phase == Prediction.PredictionPhase.Finished;
+            if (Plank.PlankDirector.Instance != null)
+                return Plank.PlankDirector.Instance.phase == Plank.PlankPhase.Finished;
             if (RedLight.RedLightDirector.Instance != null)
                 return RedLight.RedLightDirector.Instance.phase == RedLight.RoundPhase.Finished;
             if (SayWhat.SayWhatDirector.Instance != null)
@@ -166,6 +170,7 @@ namespace Party
 
         bool HasDirector =>
             Prediction.PredictionDirector.Instance != null ||
+            Plank.PlankDirector.Instance != null ||
             RedLight.RedLightDirector.Instance != null ||
             SayWhat.SayWhatDirector.Instance != null;
 

@@ -45,6 +45,11 @@ namespace Party.EditorTools
             Run(BuildTarget.StandaloneOSX, "Build/MacRedLight/Party.app",
                 "Assets/_Party/Scenes/RedLight.unity");
 
+        /// <summary>Plank Panic (#1) - the first minigame built on the active ragdoll.</summary>
+        public static void BuildMacPlank() =>
+            Run(BuildTarget.StandaloneOSX, "Build/MacPlank/Party.app",
+                "Assets/_Party/Scenes/Plank.unity");
+
         /// <summary>The ragdoll lab - a feel test bed, not a minigame.</summary>
         public static void BuildMacRagdoll() =>
             Run(BuildTarget.StandaloneOSX, "Build/MacRagdoll/Party.app",

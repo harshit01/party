@@ -77,15 +77,46 @@ namespace Party
         [SyncVar] public bool useRagdoll;
 
         Ragdoll.RagdollMuscles _ragdoll;
+        Ragdoll.RagdollGrab _grab;
+        GameObject _ragdollRoot;
+        bool _wantGrab;
+        bool _lastSentGrab;
 
         void BuildRagdoll()
         {
-            Transform host = juiceVisual != null ? juiceVisual : transform;
-            var rig = Ragdoll.RagdollBuilder.Build(host, colour);
+            // THE RAGDOLL IS NOT A CHILD OF THIS OBJECT, and that is load-bearing.
+            //
+            // Built as a child, with the root then following the pelvis, it explodes: moving
+            // the parent moves the child, which moves the pelvis, which moves the parent
+            // again - the offset doubles every frame. Measured, players reached y = -9,960
+            // and then y = +4,464,075 within two rounds.
+            //
+            // So the bones live in world space and this transform merely TRACKS them. It
+            // reports where the character is; it never carries it.
+            var rig = Ragdoll.RagdollBuilder.Build(null, colour);
+            rig.Root.transform.position = transform.position;
+            _ragdollRoot = rig.Root;
 
-            _ragdoll = gameObject.GetComponent<Ragdoll.RagdollMuscles>();
-            if (_ragdoll == null) _ragdoll = gameObject.AddComponent<Ragdoll.RagdollMuscles>();
+            _ragdoll = _ragdollRoot.AddComponent<Ragdoll.RagdollMuscles>();
             _ragdoll.Bind(rig);
+            _grab = _ragdollRoot.AddComponent<Ragdoll.RagdollGrab>();
+            _grab.Bind(_ragdoll);
+
+            // THE ROOT MUST STOP BEING A SECOND BODY.
+            //
+            // The ragdoll is built as a CHILD of this object, and this object still had its
+            // own Rigidbody, collider and gravity - so a ragdoll player was two physics
+            // representations at once: the visible jointed body, and an invisible capsule
+            // falling around beside it. On a narrow plank the phantom fell off on its own
+            // and the director dutifully eliminated the player, at 3.2 seconds, having
+            // watched the wrong object the entire time.
+            //
+            // The root now follows the pelvis instead, so transform.position means what
+            // every other system assumes it means.
+            _rb.isKinematic = true;
+            _rb.useGravity = false;
+            Collider rootCol = GetComponent<Collider>();
+            if (rootCol != null) rootCol.enabled = false;
 
             // ONE sync component, already on the prefab, that writes every bone.
             //
@@ -192,6 +223,10 @@ namespace Party
                 // Bot policy is per-minigame. #10 needs recall, not steering.
                 if (SayWhat.SayWhatDirector.Instance != null)
                     _actions = new SayWhat.SayWhatBotInput();
+
+                // Plank Panic needs a bot that closes and grabs, not one that wanders.
+                if (Plank.PlankDirector.Instance != null)
+                    _input = new Plank.PlankBotInput(transform);
             }
         }
 
@@ -237,6 +272,14 @@ namespace Party
             _input ??= Autopilot ? new BotMoveInput(transform) : (IMoveInput)new LocalMoveInput();
             CmdMove(_input.Move);
 
+            if (useRagdoll)
+            {
+                // SHIFT grabs and holds; releasing it throws, so no third button is needed.
+                var k = UnityEngine.InputSystem.Keyboard.current;
+                bool held = k != null && (k.leftShiftKey.isPressed || k.rightShiftKey.isPressed);
+                if (held != _lastSentGrab) { _lastSentGrab = held; CmdGrab(held); }
+            }
+
             // "Say What He Says": send discrete actions as they are pressed. Autopilot
             // drives them with the bot policy so a headless build exercises the real
             // input -> CmdPerform -> server path, exactly as -partyautopilot does for
@@ -257,6 +300,10 @@ namespace Party
             // Never trust a client's magnitude.
             _pendingMove = Vector2.ClampMagnitude(move, 1f);
         }
+
+        /// <summary>Hold to grab, release to throw. The second of the two action buttons.</summary>
+        [Command(channel = Channels.Reliable)]
+        void CmdGrab(bool held) => _wantGrab = held;
 
         /// <summary>Place a secret bet on who comes last (#11). Reliable: it is a decision.</summary>
         [Command(channel = Channels.Reliable)]
@@ -294,6 +341,23 @@ namespace Party
         [Server]
         public void ServerTeleport(Vector3 position)
         {
+            // A ragdoll is teleported by moving all its bones together, keeping their
+            // relative pose. Moving only the root would leave the body behind.
+            if (useRagdoll && _ragdoll?.Rig != null)
+            {
+                Vector3 delta = position - transform.position;
+                foreach (var kv in _ragdoll.Rig.Bodies)
+                {
+                    kv.Value.position += delta;
+                    kv.Value.linearVelocity = Vector3.zero;
+                    kv.Value.angularVelocity = Vector3.zero;
+                }
+                if (_ragdoll.Rig.Anchor != null) _ragdoll.Rig.Anchor.position += delta;
+                if (_ragdollRoot != null) _ragdollRoot.transform.position += delta;
+                transform.position = position;
+                return;
+            }
+
             _rb.linearVelocity = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
             transform.position = position;
@@ -306,6 +370,34 @@ namespace Party
             if (!isServer) return;   // host-authoritative: only the host integrates physics
 
             ServerPollBotActions();
+
+            // RAGDOLL PLAYERS ARE DRIVEN THROUGH THEIR MUSCLES, not by shoving the root.
+            // The root rigidbody renders nothing and carries nothing once a ragdoll exists;
+            // pushing it would fight the hip anchor that does the standing.
+            if (useRagdoll && _ragdoll != null)
+            {
+                // Keep the root over the pelvis. Everything else - the kill plane, the bot's
+                // idea of where it is, name tags, the camera - reads transform.position.
+                Rigidbody pelvis = _ragdoll.Rig?.Get(Ragdoll.Bone.Pelvis);
+                if (pelvis != null) transform.position = pelvis.position;
+
+                if (isBot && _input != null) _pendingMove = _input.Move;
+
+                // A round may forbid movement (countdown, eliminated, finished). Same rule
+                // Red Light has - and it stops bots walking off during the count.
+                bool canMove = eliminated == false && finished == false
+                               && (Plank.PlankDirector.Instance == null
+                                   || Plank.PlankDirector.Instance.MovementAllowed);
+                _ragdoll.MoveInput = canMove
+                    ? new Vector3(_pendingMove.x, 0f, _pendingMove.y)
+                    : Vector3.zero;
+
+                // A bot decides its own grab; a human's arrives by command.
+                bool grab = canMove && _wantGrab;
+                if (canMove && isBot && _input is Plank.PlankBotInput pb) grab = pb.WantsGrab;
+                if (_grab != null) _grab.SetGrab(grab);
+                return;
+            }
 
             // Bots produce their input here; humans' arrived via CmdMove.
             if (isBot && _input != null) _pendingMove = _input.Move;
@@ -375,6 +467,12 @@ namespace Party
             float a = Mathf.InverseLerp(nameFadeEnd, nameFadeStart, dist);
             Color baseCol = eliminated ? new Color(0.6f, 0.6f, 0.65f) : colour;
             nameTag.color = new Color(baseCol.r, baseCol.g, baseCol.b, a);
+        }
+
+        /// <summary>The bones are not children, so they do not get cleaned up for free.</summary>
+        void OnDestroy()
+        {
+            if (_ragdollRoot != null) Destroy(_ragdollRoot);
         }
 
         void OnStateChanged(bool _, bool __) { ApplyName(); ApplyColour(); }
